@@ -1,0 +1,19 @@
+schema_version: 1
+id: EVAL-004
+title: Stor fil utan verkligt designproblem
+category: evidence
+scenario:
+  summary: En stor deklarativ routingfil är genererad eller sammanhållen och ändras sällan.
+  inputs:
+    - En fil som överskrider large-file-tröskeln.
+    - Generator- eller konfigurationsmetadata.
+  signals:
+    - Deterministiskt verktyg markerar filen som stor.
+    - Semantisk läsning visar låg intern komplexitet och tydligt ansvar.
+expected:
+  - Behandla storleken som hotspot-signal och därefter avfärda eller nedgradera fyndet.
+  - Dokumentera counter-signal om filen är relevant för analysen.
+forbidden:
+  - Skapa verifierat DR-problem enbart från storleksindikatorn.
+  - Kräva uppdelning av filen utan konkret underhållbarhetsproblem.
+coverage_tags: [false_hotspot_large_file]

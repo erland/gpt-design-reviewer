@@ -1,0 +1,229 @@
+contract_version: 1
+workflow:
+  objective: Perform a design review deeply enough to support evidence-based findings, prioritization and prompt-sized remediation planning without requiring every file to be analyzed equally.
+  modes:
+    focused:
+      purpose: Complete the review in one coherent analysis pass when the system is small enough and sufficiently understandable.
+      eligibility_indicators:
+        - One or a few clearly bounded components can be inventoried and understood without losing architectural context.
+        - Major execution paths, responsibilities and dependencies can be traced in the current working context.
+        - Hotspots and cross-cutting concerns can be validated without splitting the system into independent review slices.
+        - Final artifact production will not force the reviewer to skip material evidence gathering.
+      forbidden_shortcut: Do not choose focused mode merely because repository file count is small.
+    progressive:
+      purpose: Split the review into explicit analysis increments while preserving a coherent system model and evidence ledger.
+      use_when_any:
+        - The source material spans several substantial repositories, applications or independently evolving subsystems.
+        - A single analysis pass would mix too many architectural contexts or important execution paths.
+        - Important hotspots require separate deep dives before conclusions can be validated.
+        - Cross-tree contracts or shared models must be understood before local findings can be judged.
+        - Available working context would otherwise force shallow sampling or premature conclusions.
+        - The reviewer cannot yet distinguish local symptoms from system-level causes with sufficient evidence.
+  mode_selection:
+    principle: Choose the smallest number of analysis increments that preserves coverage, evidence quality and resumability.
+    size_metrics_are_indicators_not_rules: true
+    consider:
+      - number_of_source_trees
+      - architectural_subsystems
+      - independently_evolving_components
+      - major_execution_paths
+      - integration_boundaries
+      - cross_cutting_concerns
+      - hotspot_count_and_diversity
+      - documentation_volume_and_conflicts
+      - analysis_context_pressure
+    reevaluate_after_inventory: true
+    allow_mode_upgrade: true
+    allow_mode_downgrade: true
+
+stages:
+  - id: intake_inventory
+    order: 1
+    purpose: Establish analysis scope, source trees, documentation, technology stack and structural inventory.
+    required_outputs:
+      - source_tree_register
+      - documentation_register
+      - system_inventory
+      - initial_scope_limits
+    completion_criteria:
+      - Every supplied source tree has a stable identifier and root.
+      - Major languages, frameworks, build systems and deployable units are identified where evidence permits.
+      - Documentation relevant to architecture or behavior is registered.
+      - Obvious exclusions, unreadable inputs and evidence gaps are recorded.
+  - id: architecture_orientation
+    order: 2
+    purpose: Build a working model of responsibilities, boundaries, dependencies and important flows before issuing design findings.
+    required_outputs:
+      - architecture_model
+      - subsystem_register
+      - important_flows
+      - boundary_hypotheses
+    completion_criteria:
+      - Main responsibilities and dependency directions are understood well enough to distinguish local code shape from architectural role.
+      - Important runtime or data flows are identified where they affect design assessment.
+      - Documentation/code mismatches that can influence later analysis are recorded.
+  - id: hotspot_selection
+    order: 3
+    purpose: Create a ranked analysis queue for areas where deeper review has the highest expected information value.
+    required_outputs:
+      - hotspot_queue
+      - hotspot_rationale
+      - non_hotspot_sampling_plan
+    completion_criteria:
+      - Hotspots have evidence-based selection rationales.
+      - No hotspot is classified as a design problem solely because it is large, central or dependency-rich.
+      - At least some non-hotspot areas are sampled to reduce selection bias when the codebase size makes this practical.
+  - id: deep_dive
+    order: 4
+    purpose: Analyze hotspots and representative non-hotspot areas in bounded increments.
+    repeatable: true
+    required_outputs:
+      - analyzed_areas
+      - preliminary_observations
+      - evidence_updates
+      - new_or_reprioritized_hotspots
+    completion_criteria:
+      - The current analysis slice has reached a stable conclusion, an explicit uncertainty, or a documented need for another slice.
+      - New dependencies or cross-cutting concerns discovered during the slice have been added to the queue.
+      - State has been checkpointed before moving to the next slice.
+  - id: cross_cutting_synthesis
+    order: 5
+    purpose: Correlate findings across subsystems and source trees, detect shared causes and remove duplicate or contradictory findings.
+    required_outputs:
+      - correlated_observations
+      - cross_tree_findings
+      - relationship_updates
+      - preserve_constraints
+    completion_criteria:
+      - Duplicate symptoms are consolidated when they share one design cause.
+      - Cross-tree contracts and shared models have been considered where relevant.
+      - Observation relationships and preserve constraints are coherent.
+  - id: evidence_gate
+    order: 6
+    purpose: Verify, downgrade, reject or mark unresolved observations before final reporting.
+    required_outputs:
+      - verified_observations
+      - downgraded_observations
+      - rejected_observations
+      - unresolved_evidence_gaps
+    completion_criteria:
+      - Every reportable problem has concrete evidence and an appropriate evidence level.
+      - Unsupported conclusions are downgraded, reframed or removed.
+      - Material unanalyzed areas are disclosed.
+  - id: final_artifacts
+    order: 7
+    purpose: Produce the design review, solution strategy and implementation plan from verified analysis state.
+    required_outputs:
+      - design-review.md
+      - recommended-solution-strategy.md
+      - implementation-plan.md
+    completion_criteria:
+      - All three artifacts are mutually traceable.
+      - Strategy priority is not a severity-only ordering.
+      - Implementation steps are prompt-sized and preserve required behavior and boundaries.
+
+hotspot_selection:
+  goal: Maximize expected design information value, not merely find the largest files.
+  signals:
+    - centrality_or_fan_in_fan_out
+    - responsibility_concentration
+    - workflow_or_state_complexity
+    - integration_boundary
+    - repeated_special_cases
+    - duplicated_domain_rules
+    - dependency_cycles_or_back_edges
+    - change_sensitive_shared_models
+    - difficult_test_setup_or_broad_fixture_requirements
+    - documentation_implementation_mismatch
+    - large_symbol_or_file_with_multiple_independent_responsibilities
+  counter_signals:
+    - generated_code
+    - declarative_configuration_with_natural_size
+    - cohesive_data_tables_or_mappings
+    - large_but_single_purpose_components
+    - stable_vendor_or_framework_scaffolding
+  queue_fields:
+    - hotspot_id
+    - source_tree
+    - path_or_scope
+    - rationale
+    - signals
+    - expected_information_value
+    - prerequisite_hotspots
+    - status
+  ordering_principles:
+    - Analyze prerequisite boundaries before dependent hotspots.
+    - Prefer hotspots that can confirm or falsify several architectural hypotheses.
+    - Prefer a representative slice over exhaustive file-by-file review.
+    - Reorder the queue when new evidence changes expected information value.
+
+progressive_analysis:
+  analysis_unit:
+    principle: One increment should cover a coherent architectural question, subsystem, flow or hotspot cluster that can be analyzed and checkpointed without requiring unrelated changes of context.
+    avoid:
+      - arbitrary_equal_file_batches
+      - one_file_per_prompt_as_default
+      - mixing_unrelated_subsystems_for_convenience
+  continuation_decision:
+    continue_when_any:
+      - A material hotspot remains unanalyzed.
+      - An observation depends on evidence from an unanalyzed area.
+      - Cross-tree or cross-layer relationships are still unresolved.
+      - The system model contains a material contradiction that affects findings.
+      - Current evidence would force a high-impact conclusion to remain weak or speculative.
+    may_finish_when_all:
+      - Material architecture areas have either been analyzed or explicitly disclosed as out of scope.
+      - Important hotspots have stable conclusions or explicit unresolved evidence gaps.
+      - Cross-cutting synthesis is complete for reportable observations.
+      - Evidence gate has been applied.
+      - Remaining unknowns do not materially change the recommended solution strategy.
+  stop_conditions:
+    - User explicitly narrows or stops the review.
+    - Required source material is unavailable and no meaningful analysis can continue.
+    - Further analysis would add negligible decision value relative to already verified evidence.
+
+checkpointing:
+  policy: after_each_material_analysis_increment
+  minimum_state:
+    - workflow_mode
+    - current_stage
+    - source_trees
+    - documentation
+    - system_inventory
+    - architecture_model
+    - subsystem_register
+    - important_flows
+    - hotspot_queue
+    - analyzed_areas
+    - remaining_areas
+    - preliminary_observations
+    - verified_observations
+    - rejected_or_downgraded_observations
+    - evidence_gaps
+    - generated_artifacts
+  checkpoint_quality_rules:
+    - Store conclusions and supporting references, not hidden chain-of-thought.
+    - Record why a hotspot remains in or leaves the queue.
+    - Keep stable IDs for source trees, hotspots and observations across resumes.
+    - Do not mark an area analyzed merely because files were listed or skimmed.
+
+resume:
+  command: Gör nästa steg
+  behavior:
+    - Load explicit workspace state before choosing work.
+    - Do not repeat completed inventory or deep dives unless new input invalidates them.
+    - Reconcile newly supplied source material before continuing the existing queue.
+    - Select the next highest-value unblocked analysis increment or, when analysis is complete, the next artifact stage.
+    - Update checkpoint state after the increment.
+  invalidation_rules:
+    - New or materially changed source trees invalidate only affected inventory, architecture hypotheses, hotspots and observations unless the change is system-wide.
+    - New documentation triggers reconciliation with existing implementation evidence but does not automatically invalidate code-derived findings.
+    - User corrections to business or architectural assumptions invalidate conclusions that depended on those assumptions.
+
+coverage_and_bias_controls:
+  principles:
+    - Hotspot-first does not mean hotspot-only.
+    - Include representative sampling of apparently healthy areas when practical.
+    - Look for evidence that falsifies an emerging design narrative.
+    - Distinguish widespread systemic causes from repeated local symptoms.
+    - Explicitly disclose material areas that were not inspected deeply.

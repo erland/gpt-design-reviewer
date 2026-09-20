@@ -1,0 +1,163 @@
+contract_version: 1
+artifact:
+  id: design_review
+  filename: design-review.md
+  format: markdown
+  purpose: Evidensbaserad diagnostisk design review som beskriver systembild, styrkor, problem, konsekvenser och osäkerheter utan att ersätta den senare lösningsstrategin.
+
+principles:
+  - Separate observed facts, evidence, interpretation, consequence and proposed direction.
+  - Reuse stable DR identifiers from the observation model.
+  - Severity describes consequence, not remediation priority.
+  - Include strengths and preserve constraints, not only problems.
+  - Make uncertainty and missing evidence explicit.
+  - Do not manufacture findings to fill sections.
+  - Do not turn the review into a prioritized implementation plan.
+
+sections:
+  - id: executive_summary
+    heading: Sammanfattning
+    required: true
+    content:
+      - overall_design_assessment
+      - most_material_risks
+      - most_important_strengths
+      - development_gates
+      - evidence_limitations
+  - id: review_scope
+    heading: Omfattning och underlag
+    required: true
+    content:
+      - source_trees
+      - documentation_reviewed
+      - excluded_or_unavailable_material
+      - analysis_mode
+      - review_boundaries
+  - id: system_overview
+    heading: Systemöversikt
+    required: true
+    content:
+      - technology_stack
+      - main_components
+      - responsibilities
+      - important_dependencies
+      - important_data_or_execution_flows
+      - architecture_assumptions
+  - id: strengths_to_preserve
+    heading: Styrkor och strukturer som bör bevaras
+    required: true
+    content:
+      - design_strengths
+      - stable_boundaries
+      - successful_abstractions
+      - useful_test_seams
+      - user_visible_properties_to_preserve
+  - id: findings_overview
+    heading: Översikt över observationer
+    required: true
+    content:
+      - observation_index
+      - severity_distribution
+      - evidence_distribution
+      - areas_with_high_change_pressure
+      - relationships_worth_noting
+  - id: detailed_observations
+    heading: Detaljerade observationer
+    required: true
+    repeat_for_each_observation: true
+    observation_fields:
+      - id
+      - title
+      - kind
+      - affected_areas
+      - observation
+      - evidence
+      - rationale
+      - consequence
+      - severity
+      - evidence_level
+      - confidence
+      - impact
+      - change_pressure
+      - remediation_risk
+      - remediation_effort
+      - enabling_effect
+      - before_further_development
+      - relationships
+      - preserve_constraints
+      - proposed_direction
+      - validation_notes
+  - id: cross_cutting_patterns
+    heading: Tvärgående mönster
+    required: true
+    content:
+      - recurring_causes
+      - systemic_coupling
+      - repeated_special_cases
+      - architectural_tensions
+      - interactions_between_findings
+  - id: development_gates
+    heading: Vad bör åtgärdas före vidareutveckling
+    required: true
+    content:
+      - must_fix_before
+      - should_fix_before
+      - safe_to_continue_in_parallel
+    rule: Refer to observation IDs and explain the affected development area; do not define the final remediation order here.
+  - id: uncertainties_and_evidence_gaps
+    heading: Osäkerheter och evidensluckor
+    required: true
+    content:
+      - needs_more_information
+      - assumptions
+      - missing_runtime_or_operational_context
+      - suggested_validation
+  - id: review_boundaries
+    heading: Avgränsningar
+    required: true
+    content:
+      - topics_not_assessed
+      - low_value_local_issues_omitted
+      - known_limitations
+  - id: handoff_to_solution_strategy
+    heading: Underlag för lösningsstrategin
+    required: true
+    content:
+      - candidate_remediation_themes
+      - dependency_constraints
+      - preserve_constraints
+      - high_value_enablers
+    rule: Summarize inputs for prioritization without presenting a ranked solution sequence.
+
+observation_rendering:
+  heading_pattern: "{id} – {title}"
+  required_labels:
+    - Berörda delar
+    - Observation
+    - Evidens
+    - Varför detta spelar roll
+    - Konsekvens
+    - Allvarlighetsgrad
+    - Evidensnivå och säkerhet
+    - Påverkan
+    - Förändringstryck
+    - Åtgärdsrisk och omfattning
+    - Möjliggörande effekt
+    - Före vidareutveckling
+    - Relationer
+    - Bevara
+    - Föreslagen riktning
+  optional_labels:
+    - Ytterligare verifiering
+
+handoff:
+  next_artifact: recommended-solution-strategy.md
+  required_inputs:
+    - design_review_observations
+    - observation_relationships
+    - development_gates
+    - preserve_constraints
+    - evidence_gaps
+  forbidden_outputs:
+    - final_ranked_remediation_sequence
+    - prompt_sized_implementation_steps

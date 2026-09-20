@@ -1,0 +1,49 @@
+contract_version: 1
+purpose: >-
+  Define deterministic helpers that collect reproducible evidence for Design Reviewer.
+  These tools identify indicators and hotspots only; they never create design conclusions.
+principles:
+  - evidence_not_judgment
+  - deterministic_where_practical
+  - best_effort_per_file
+  - no_single_tool_failure_blocks_core_review
+  - thresholds_are_indicators_not_quality_rules
+primary_tool:
+  id: source-tree-inventory
+  implementation: scripts/analyze_source_tree.py
+  output_format: json
+  mutates_source_tree: false
+  dependencies: [python_standard_library]
+  collected_evidence:
+    - repository_file_inventory
+    - extension_and_directory_statistics
+    - text_and_source_line_counts
+    - large_file_indicators
+    - large_function_indicators_for_supported_languages
+    - import_dependency_indicators_for_supported_languages
+    - possible_cross_file_duplicate_blocks
+  supported_function_scanners:
+    high_confidence: [python]
+    heuristic: [javascript, typescript, java, kotlin, csharp, go, rust]
+  supported_import_scanners:
+    - python
+    - javascript
+    - typescript
+    - java
+    - kotlin
+    - csharp
+    - go
+  failure_policy:
+    invalid_root: tool_fails
+    unreadable_or_unparseable_file: record_error_and_continue
+    unsupported_language: inventory_file_and_skip_language_specific_indicators
+interpretation_rules:
+  - Large files and functions are hotspot indicators, not DR observations by themselves.
+  - Import lists are dependency clues and do not prove architectural coupling.
+  - Duplicate-block fingerprints are candidates for semantic review and may include false positives.
+  - Generated, vendored, migration, fixture and configuration code must be interpreted in context.
+  - Tool output must be combined with source reading before a verified design problem is emitted.
+runtime_fallback:
+  when_code_execution_unavailable: >-
+    Continue the semantic review using runtime file listing, search and reading. Record that
+    deterministic evidence was unavailable; do not block the review solely for this reason.

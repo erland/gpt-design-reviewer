@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://design-reviewer.local/schemas/solution-strategy-report.schema.json",
+  "title": "Design Reviewer Solution Strategy Report Contract",
+  "type": "object",
+  "required": ["contract_version", "artifact", "inputs", "principles", "sections", "traceability", "handoff", "forbidden_shortcuts"],
+  "properties": {
+    "contract_version": {"type": "integer", "minimum": 1},
+    "artifact": {
+      "type": "object",
+      "required": ["id", "filename", "format", "purpose"],
+      "properties": {
+        "id": {"const": "recommended_solution_strategy"},
+        "filename": {"const": "recommended-solution-strategy.md"},
+        "format": {"const": "markdown"},
+        "purpose": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": true
+    },
+    "inputs": {"type": "object"},
+    "principles": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "sections": {
+      "type": "array",
+      "minItems": 8,
+      "items": {
+        "type": "object",
+        "required": ["id", "heading", "required"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "heading": {"type": "string", "minLength": 1},
+          "required": {"type": "boolean"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "rendering": {"type": "object"},
+    "traceability": {
+      "type": "object",
+      "required": ["observation_ids_required", "stable_strategy_ids_required", "sequence_rationale_required", "preserve_constraints_required", "handoff_to_implementation_plan_required"],
+      "properties": {
+        "observation_ids_required": {"const": true},
+        "stable_strategy_ids_required": {"const": true},
+        "sequence_rationale_required": {"const": true},
+        "preserve_constraints_required": {"const": true},
+        "handoff_to_implementation_plan_required": {"const": true}
+      },
+      "additionalProperties": true
+    },
+    "handoff": {
+      "type": "object",
+      "required": ["next_artifact", "required_inputs", "forbidden_outputs"],
+      "properties": {
+        "next_artifact": {"const": "implementation-plan.md"},
+        "required_inputs": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "forbidden_outputs": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+      },
+      "additionalProperties": true
+    },
+    "forbidden_shortcuts": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+  },
+  "additionalProperties": true
+}

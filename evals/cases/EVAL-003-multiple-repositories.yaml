@@ -1,0 +1,21 @@
+schema_version: 1
+id: EVAL-003
+title: Flera repositories med dold koppling
+category: cross_tree
+scenario:
+  summary: Frontend, backend och ett delat bibliotek ligger i separata repositories men delar kontrakt och förändras tillsammans.
+  inputs:
+    - frontend repository
+    - backend repository
+    - shared-contracts repository
+  signals:
+    - Samma DTO-form förekommer i flera träd.
+    - Förändringar i shared-contracts kräver koordinerade ändringar i frontend och backend.
+expected:
+  - Göra cross-tree analysis och beskriva kopplingen som ett systemproblem när evidensen stödjer det.
+  - Hänvisa till evidens från relevanta repositories.
+  - Bevara lokalt goda gränser som inte orsakar kopplingsproblemet.
+forbidden:
+  - Bedöma varje repository helt isolerat.
+  - Påstå cross-tree-problem baserat på endast ett träd.
+coverage_tags: [multiple_repositories]

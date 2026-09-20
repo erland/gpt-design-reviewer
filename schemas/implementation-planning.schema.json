@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Design Reviewer implementation planning contract",
+  "type": "object",
+  "required": [
+    "contract_version", "purpose", "inputs", "planning_unit", "step_sizing",
+    "ordering", "scope_rules", "change_specification", "verification",
+    "completion_model", "risk_handling", "execution_handoff", "plan_quality_checks",
+    "forbidden_shortcuts"
+  ],
+  "properties": {
+    "contract_version": {"type": "integer", "const": 1},
+    "purpose": {"type": "string", "minLength": 20},
+    "inputs": {
+      "type": "object",
+      "required": ["required", "optional"],
+      "properties": {
+        "required": {"type": "array", "minItems": 4, "items": {"type": "string"}},
+        "optional": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "planning_unit": {
+      "type": "object",
+      "required": ["id_pattern", "principle", "required_fields"],
+      "properties": {
+        "id_pattern": {"const": "^IP-[0-9]{3,}$"},
+        "principle": {"type": "string", "minLength": 30},
+        "required_fields": {"type": "array", "minItems": 10, "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "step_sizing": {
+      "type": "object",
+      "required": ["target", "prefer", "split_when", "do_not_split_when", "forbidden_sizing_shortcuts"],
+      "properties": {
+        "target": {"const": "one_prompt_one_checkpoint"},
+        "prefer": {"type": "array", "minItems": 3},
+        "split_when": {"type": "array", "minItems": 5},
+        "do_not_split_when": {"type": "array", "minItems": 2},
+        "forbidden_sizing_shortcuts": {"type": "array", "minItems": 3}
+      },
+      "additionalProperties": false
+    },
+    "ordering": {"type": "object", "required": ["rules"], "properties": {"rules": {"type": "array", "minItems": 5}}, "additionalProperties": false},
+    "scope_rules": {"type": "object", "required": ["each_step_should_define", "guidance"]},
+    "change_specification": {"type": "object", "required": ["required_characteristics", "rules"]},
+    "verification": {"type": "object", "required": ["minimum_categories", "rules"]},
+    "completion_model": {"type": "object", "required": ["done_criteria_rules", "checkpoint_rules"]},
+    "risk_handling": {"type": "object", "required": ["rules"]},
+    "execution_handoff": {
+      "type": "object",
+      "required": ["default_command", "executor_should_receive", "executor_rules"],
+      "properties": {
+        "default_command": {"const": "Gör nästa steg"},
+        "executor_should_receive": {"type": "array", "minItems": 8},
+        "executor_rules": {"type": "array", "minItems": 4}
+      }
+    },
+    "plan_quality_checks": {"type": "array", "minItems": 7},
+    "forbidden_shortcuts": {"type": "array", "minItems": 6}
+  },
+  "additionalProperties": false
+}

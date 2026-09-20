@@ -1,0 +1,245 @@
+contract_version: 1
+purpose: >-
+  Convert design-review observations into a defensible remediation strategy that
+  balances engineering value, risk, change pressure, dependencies and enabling
+  effect without collapsing the decision into severity-only ordering or a false-precision score.
+
+inputs:
+  required:
+    - design_review_observations
+    - observation_relationships
+    - development_gates
+    - preserve_constraints
+  optional:
+    - roadmap_or_expected_changes
+    - delivery_constraints
+    - user_experience_constraints
+    - migration_constraints
+    - operational_context
+
+eligibility:
+  rules:
+    - id: evidence_gate
+      description: >-
+        Verified problems and strong indicators may normally drive remediation.
+        Improvement opportunities may drive remediation when value is explicit.
+        Needs-more-information findings may not be treated as committed remediation
+        until validation has raised confidence or the strategy explicitly creates a validation action.
+    - id: preserve_constraints_gate
+      description: >-
+        A candidate action that violates a preserve constraint must be redesigned,
+        explicitly justified as a product/requirement change, or rejected.
+    - id: problem_to_action_separation
+      description: >-
+        Multiple observations may be solved by one action or theme, and one observation
+        may require multiple actions. Do not assume one finding equals one implementation step.
+
+strategy_units:
+  remediation_theme:
+    id_pattern: '^RS-[0-9]{2,}$'
+    required_fields:
+      - id
+      - title
+      - objective
+      - addresses
+      - rationale
+      - value_profile
+      - risk_profile
+      - dependency_profile
+      - enabling_effect
+      - preserve_constraints
+      - recommended_approach
+      - ordering_rationale
+      - validation
+  validation_action:
+    id_pattern: '^VA-[0-9]{2,}$'
+    purpose: Resolve material uncertainty before committing to risky remediation.
+  product_or_ux_alternative:
+    id_pattern: '^UX-[0-9]{2,}$'
+    purpose: >-
+      Represent a requirement or user-interface alternative when changing the product
+      or interaction can reduce implementation complexity without unacceptable loss of user value.
+
+priority_dimensions:
+  benefit:
+    inputs:
+      - severity
+      - impact
+      - change_pressure
+      - development_gate
+      - breadth_of_observations_addressed
+    interpretation: >-
+      Higher benefit means the change materially reduces recurring design cost,
+      delivery risk or user-facing friction in an area likely to change.
+  confidence:
+    inputs:
+      - evidence_level
+      - observation_confidence
+      - consistency_across_sources
+    interpretation: >-
+      Low confidence should reduce commitment to remediation and may promote a validation action instead.
+  cost:
+    inputs:
+      - remediation_effort
+      - migration_scope
+      - number_of_components_touched
+    interpretation: Cost is distinct from risk; a large but mechanical change can be costly but low-risk.
+  risk:
+    inputs:
+      - remediation_risk
+      - behavioral_change
+      - data_or_api_migration
+      - rollback_difficulty
+      - testability_before_change
+    interpretation: >-
+      High-risk actions should normally be decomposed, preceded by safety/enabling work,
+      or deferred until stronger evidence exists.
+  enabling_effect:
+    inputs:
+      - observation_enabling_effect
+      - themes_unblocked
+      - testability_created
+      - boundaries_created
+      - migration_risk_reduced
+    interpretation: >-
+      Strong enabling changes may move earlier even when the directly addressed problem is only medium severity.
+  urgency:
+    inputs:
+      - must_fix_before
+      - should_fix_before
+      - near_term_roadmap_dependency
+    interpretation: Urgency constrains timing but does not erase dependency or safety constraints.
+
+ordering_model:
+  type: constrained_qualitative_ordering
+  numeric_score_required: false
+  stages:
+    - id: 1_hard_constraints
+      title: Apply hard ordering constraints
+      rules:
+        - Respect depends_on and prerequisite relationships.
+        - Place explicit safety or testability enablers before risky dependent changes when justified.
+        - Respect must-fix-before development gates for the affected development path.
+        - Do not schedule an action before required evidence validation.
+        - Do not violate preserve constraints silently.
+    - id: 2_group_into_themes
+      title: Group observations into coherent remediation themes
+      rules:
+        - Prefer themes that reduce several related findings through one coherent design move.
+        - Avoid themes so broad that they become disguised big-bang rewrites.
+        - Keep unrelated changes separate even if they share severity.
+    - id: 3_compare_value_and_risk
+      title: Compare benefit, confidence, cost, risk and enabling effect
+      rules:
+        - Prefer high-benefit low-risk actions when dependency constraints allow.
+        - Prefer strong enabling actions when they reduce risk or cost of later important work.
+        - Deprioritize low-benefit high-risk work unless a development gate makes it unavoidable.
+        - Prefer incremental reversible changes over equally valuable irreversible rewrites.
+    - id: 4_sequence_incrementally
+      title: Build an incremental sequence
+      rules:
+        - Establish seams, tests or boundaries before invasive behavior changes when useful.
+        - Keep each strategy theme independently valuable where possible.
+        - Preserve deployability and observable behavior between themes when practical.
+        - Include migration and rollback thinking for stateful or contract-changing work.
+    - id: 5_review_global_optimum
+      title: Review the sequence as a whole
+      rules:
+        - Check that local optimizations do not increase total migration cost.
+        - Check whether an earlier theme makes later themes obsolete or substantially simpler.
+        - Check that the proposed order still matches likely future development pressure.
+        - Check that deferred items have an explicit reason, not merely a lower severity label.
+
+priority_bands:
+  - id: P0
+    name: prerequisite_or_blocker
+    meaning: >-
+      Must occur first because it is a hard prerequisite, safety/evidence gate or an explicit
+      must-fix-before constraint for planned development. P0 does not mean highest severity.
+  - id: P1
+    name: high_value_next
+    meaning: >-
+      Strong value with acceptable risk, often including enabling changes that materially
+      simplify or de-risk important later work.
+  - id: P2
+    name: valuable_after_foundation
+    meaning: >-
+      Worth doing after prerequisites and higher-leverage foundations are in place.
+  - id: P3
+    name: opportunistic_or_deferred
+    meaning: >-
+      Real improvement with limited near-term value, low change pressure or unfavorable cost/risk balance.
+  - id: PX
+    name: validate_before_committing
+    meaning: >-
+      Insufficient evidence or confidence for remediation; perform validation or gather context first.
+
+tradeoff_rules:
+  - condition: high_severity_high_risk_with_enabler
+    action: >-
+      Prefer the lower-risk enabling theme first when it materially lowers the risk of the high-severity remediation.
+  - condition: medium_severity_high_change_pressure_low_risk
+    action: May be prioritized ahead of a higher-severity low-change-pressure issue.
+  - condition: low_value_high_risk
+    action: Defer unless required by an explicit dependency, compliance, correctness or roadmap gate.
+  - condition: weak_evidence_high_risk
+    action: Create a validation action before remediation.
+  - condition: one_theme_addresses_many_findings
+    action: Raise strategic value when the theme is cohesive and does not create an oversized change.
+  - condition: product_or_ux_change_reduces_complexity
+    action: >-
+      Present it as an explicit alternative with user-value tradeoffs; do not silently rewrite requirements.
+  - condition: rewrite_vs_incremental
+    action: Prefer incremental migration unless incremental change is demonstrably more dangerous or uneconomic.
+
+requirement_and_ux_alternatives:
+  allowed: true
+  rules:
+    - State the current requirement or interaction that drives complexity.
+    - Explain the code/design complexity it causes.
+    - Describe the alternative user or requirement behavior.
+    - Describe user-visible gains and losses.
+    - Treat acceptance as a product decision, not an implementation assumption.
+    - Keep a technical strategy available when the product alternative is not accepted, when reasonably possible.
+
+strategy_output_model:
+  required_sections:
+    - strategy_summary
+    - ordering_constraints
+    - prioritized_themes
+    - validation_actions
+    - product_or_ux_alternatives
+    - deferred_or_rejected_actions
+    - preserve_constraints
+    - handoff_to_implementation_plan
+  prioritized_theme_fields:
+    - id
+    - priority_band
+    - title
+    - addresses
+    - objective
+    - why_now
+    - benefit
+    - confidence
+    - cost
+    - risk
+    - enabling_effect
+    - dependencies
+    - preserves
+    - recommended_approach
+    - validation
+  traceability:
+    observation_ids_required: true
+    stable_strategy_ids_required: true
+    explain_ordering_required: true
+
+forbidden_shortcuts:
+  - sort_by_severity_only
+  - use_single_numeric_score_as_final_decision
+  - equate_large_effort_with_high_risk
+  - assume_one_observation_equals_one_action
+  - commit_high_risk_change_from_weak_evidence
+  - hide_requirement_change_inside_technical_refactoring
+  - recommend_big_bang_rewrite_without_explicit_comparative_justification
+  - ignore_preserve_constraints
+  - defer_without_rationale

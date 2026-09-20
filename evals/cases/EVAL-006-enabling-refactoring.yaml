@@ -1,0 +1,19 @@
+schema_version: 1
+id: EVAL-006
+title: Enabling refactoring bör genomföras först
+category: planning
+scenario:
+  summary: Ett litet ansvarsextraktionssteg gör två senare förändringar enklare, säkrare och mer testbara.
+  inputs:
+    - Ett RS-tema för ansvarsextraktion.
+    - Två senare RS-teman som beror på den nya gränsen.
+  signals:
+    - Enabling effect är hög medan remediation risk är låg.
+    - Senare steg kan verifieras tydligare efter extraktionen.
+expected:
+  - Placera enabling-steget före beroende förändringar.
+  - Bryta implementationen till separata IP-checkpoints när verifieringen skiljer sig.
+forbidden:
+  - Slå ihop enabling-refaktoreringen och alla efterföljande riskfyllda ändringar i ett enda IP-steg.
+  - Låta severity ensam bryta det hårda beroendet.
+coverage_tags: [enabling_refactoring_first]

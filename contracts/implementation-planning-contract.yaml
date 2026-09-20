@@ -1,0 +1,174 @@
+contract_version: 1
+purpose: >-
+  Convert the recommended solution strategy into a sequence of implementation steps
+  that an LLM can execute one prompt at a time without redoing the design analysis.
+
+inputs:
+  required:
+    - recommended_solution_strategy
+    - strategy_theme_dependencies
+    - preserve_constraints
+    - validation_requirements
+  optional:
+    - repository_layout
+    - build_and_test_commands
+    - delivery_constraints
+    - branch_or_pr_constraints
+    - migration_constraints
+    - user_experience_decisions
+
+planning_unit:
+  id_pattern: '^IP-[0-9]{3,}$'
+  principle: >-
+    One implementation step is the smallest coherent change that produces a useful,
+    reviewable checkpoint and can reasonably be completed and verified in one prompt.
+  required_fields:
+    - id
+    - title
+    - source_strategy_items
+    - objective
+    - rationale
+    - scope
+    - changes
+    - non_goals
+    - prerequisites
+    - preserve_constraints
+    - verification
+    - done_criteria
+    - risk_notes
+    - continuation
+
+step_sizing:
+  target: one_prompt_one_checkpoint
+  prefer:
+    - one coherent architectural move
+    - one subsystem or tightly related file cluster
+    - one independently verifiable behavior-preserving refactoring
+    - one migration preparation or safety-enabling change
+    - one explicit product or UX decision implementation after acceptance
+  split_when:
+    - the step mixes unrelated responsibilities or strategy themes
+    - the step needs materially different verification methods
+    - the step combines foundation work with invasive dependent changes
+    - the step would require broad speculative edits before local evidence can be checked
+    - rollback would be difficult because several independent changes are bundled
+    - success cannot be expressed with a small set of concrete done criteria
+    - the expected context or edit surface is too large for reliable single-prompt execution
+  do_not_split_when:
+    - splitting would leave intermediate code invalid or misleading
+    - a mechanical multi-file change is tightly coupled and verified as one atomic checkpoint
+    - the smaller pieces provide no meaningful independent review or verification point
+  forbidden_sizing_shortcuts:
+    - one_file_per_step_by_default
+    - fixed_number_of_files_per_step
+    - fixed_line_count_limit_as_primary_rule
+    - entire_strategy_theme_in_one_step_without_cohesion_check
+
+ordering:
+  rules:
+    - Preserve hard dependencies from the solution strategy.
+    - Place testability, seams, observability or migration safety before invasive dependent changes when justified.
+    - Resolve VA-* validation actions before implementation that depends on their outcome.
+    - Do not implement a UX-* alternative unless the required product/user decision is explicitly accepted.
+    - Prefer behavior-preserving structural steps before behavior changes when that reduces risk.
+    - Keep the repository buildable and testable between steps whenever practical.
+    - Let earlier steps create simpler interfaces or boundaries for later steps when that reduces total risk.
+
+scope_rules:
+  each_step_should_define:
+    - affected_subsystem_or_area
+    - likely_files_or_symbols_when_known
+    - intended_behavioral_effect
+    - explicit_non_goals
+    - interfaces_or_behaviors_to_preserve
+  guidance: >-
+    File names may be listed when they are known from the reviewed codebase, but the plan
+    should describe the architectural intent rather than pretending the exact edit set is immutable.
+
+change_specification:
+  required_characteristics:
+    - concrete_enough_to_execute
+    - traceable_to_strategy
+    - bounded_in_scope
+    - avoids_reanalysis
+    - distinguishes_required_from_optional_changes
+  rules:
+    - Describe what should change and why, not hidden chain-of-thought.
+    - Reuse DR-* and RS-* identifiers for traceability where relevant.
+    - Include migrations or compatibility handling when contracts, persistence or public APIs change.
+    - State when tests or safety checks must be created before production code changes.
+    - Avoid prescribing incidental formatting or local implementation details unless they are necessary to the design goal.
+
+verification:
+  minimum_categories:
+    - targeted_checks
+    - regression_checks
+    - structural_or_architectural_checks
+  rules:
+    - Every step must have executable or observable verification.
+    - Prefer existing project commands when known.
+    - If a required verification command is unknown, describe the check and mark command discovery as part of the step.
+    - Behavioral changes must include user- or API-visible acceptance checks where relevant.
+    - Structural refactorings must verify preserved behavior, not only compilation.
+    - Steps touching persistent data, contracts or migrations must include forward/migration and rollback or recovery checks where applicable.
+
+completion_model:
+  done_criteria_rules:
+    - Criteria must be binary or observably testable where practical.
+    - A step is not done merely because code was changed.
+    - Build/test success alone is insufficient when the step has architectural or UX intent.
+    - Documentation or status updates required to keep later steps unambiguous belong in done criteria.
+  checkpoint_rules:
+    - Record completed step ID and verification evidence.
+    - Record material deviations from the plan.
+    - Update dependencies if implementation reveals a new prerequisite.
+    - Do not silently mark downstream steps complete.
+
+risk_handling:
+  rules:
+    - High-risk steps should normally be preceded by enabling or validation steps.
+    - Mark behavior-changing, contract-changing, data-changing and difficult-to-rollback work explicitly.
+    - Prefer reversible migrations and compatibility windows when appropriate.
+    - If a planned step becomes materially larger during execution, stop at a coherent checkpoint and split the remaining work.
+    - If implementation evidence contradicts the design review, update the plan rather than forcing the original recommendation.
+
+execution_handoff:
+  default_command: 'Gör nästa steg'
+  executor_should_receive:
+    - current_step
+    - prerequisites_status
+    - source_strategy_items
+    - objective
+    - scope
+    - changes
+    - non_goals
+    - preserve_constraints
+    - verification
+    - done_criteria
+    - relevant_prior_checkpoint_notes
+  executor_rules:
+    - Execute the current step without redoing the complete design review.
+    - Inspect enough current code to implement safely and detect stale assumptions.
+    - Do not opportunistically perform later steps unless required to keep the current step valid.
+    - If blocked, report the concrete blocker and preserve a resumable checkpoint.
+    - After successful verification, advance to the next incomplete step.
+
+plan_quality_checks:
+  - Every committed RS-* theme maps to one or more IP-* steps, or has an explicit reason for no implementation step.
+  - Every IP-* step maps back to one or more RS-*, VA-* or accepted UX-* items.
+  - Dependencies form an executable order without unresolved cycles.
+  - No step relies on an unaccepted product decision.
+  - Every step has explicit non-goals and preserve constraints when relevant.
+  - Every step has verification and done criteria.
+  - Large/risky themes are decomposed into enabling, migration and completion checkpoints where appropriate.
+  - The plan does not require the executor to reconstruct the original prioritization rationale to know what to do next.
+
+forbidden_shortcuts:
+  - copy_strategy_themes_directly_as_steps_without_decomposition
+  - use_vague_steps_such_as_refactor_module_or_improve_architecture
+  - omit_verification
+  - omit_non_goals_for_broad_changes
+  - combine_unrelated_cleanup_with_design_change
+  - silently_assume_ux_or_requirement_decisions
+  - require_full_reanalysis_before_each_step
+  - mark_step_done_on_code_change_without_checkpoint_verification

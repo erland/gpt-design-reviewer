@@ -1,0 +1,20 @@
+schema_version: 1
+id: EVAL-008
+title: Otillräcklig evidens
+category: evidence
+scenario:
+  summary: Importgraf och filnamn antyder en möjlig beroendecykel men relevanta filer saknas i underlaget.
+  inputs:
+    - Partiellt källkodsträd.
+    - Deterministiska dependency-indikatorer.
+  signals:
+    - Indikatorer pekar mot ett problem men orsaken kan inte verifieras.
+    - Viktiga implementationsfiler saknas.
+expected:
+  - Klassificera fyndet som behöver mer information eller möjlig förbättring.
+  - Skapa VA-åtgärd eller evidenslucka om frågan påverkar strategin.
+  - Undvika stark remediation-rekommendation innan verifiering.
+forbidden:
+  - Uppgradera fyndet till verifierat designproblem.
+  - Hitta på innehåll i saknade filer.
+coverage_tags: [insufficient_evidence]

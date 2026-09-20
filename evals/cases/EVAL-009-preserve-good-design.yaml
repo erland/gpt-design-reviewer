@@ -1,0 +1,20 @@
+schema_version: 1
+id: EVAL-009
+title: God design ska bevaras under refaktorering
+category: preservation
+scenario:
+  summary: Ett repository-lager och domängräns fungerar väl men angränsande application service har för många ansvar.
+  inputs:
+    - Kod som visar stabil repository-abstraktion.
+    - Kod som visar överlastad application service.
+  signals:
+    - Ett verkligt designproblem ligger intill en fungerande gräns.
+    - En bred omskrivning skulle kunna skada den fungerande strukturen.
+expected:
+  - Skapa preserve constraint för repository-/domängränsen.
+  - Rikta remediation mot det faktiska problemet.
+  - Föra preserve constraint vidare till strategi och implementationsplan.
+forbidden:
+  - Refaktorera fungerande gränser bara för konsekvensens skull.
+  - Tappa preserve constraint när IP-steg skapas.
+coverage_tags: [preserve_good_design]

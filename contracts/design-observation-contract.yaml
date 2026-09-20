@@ -1,0 +1,175 @@
+contract_version: 1
+observation:
+  id:
+    pattern: '^DR-[0-9]{3,}$'
+    required: true
+    description: Stable identifier used across review, strategy and implementation plan.
+  title:
+    required: true
+  kind:
+    required: true
+    allowed:
+      - design_problem
+      - design_strength
+      - uncertainty
+      - improvement_opportunity
+  affected_areas:
+    required: true
+    min_items: 1
+    item_fields:
+      - source_tree
+      - path
+      - symbol
+      - role
+  observation:
+    required: true
+  evidence:
+    required: true
+    min_items: 1
+    item_fields:
+      - source_tree
+      - path
+      - symbol
+      - description
+      - evidence_type
+  rationale:
+    required_for:
+      - design_problem
+      - improvement_opportunity
+  consequence:
+    required_for:
+      - design_problem
+  severity:
+    required_for:
+      - design_problem
+    allowed:
+      - critical
+      - high
+      - medium
+      - low
+      - informational
+    meaning:
+      critical: Material risk to correctness, evolvability or delivery; should normally block dependent development.
+      high: Significant maintenance or change risk that should be addressed before major dependent work.
+      medium: Meaningful design debt with recurring cost but not an immediate blocker.
+      low: Localized or limited design cost with modest future impact.
+      informational: Useful context, but not a remediation priority by itself.
+  evidence_level:
+    required: true
+    allowed:
+      - verified_problem
+      - strong_indicator
+      - improvement_opportunity
+      - needs_more_information
+    downgrade_rule: When evidence does not support a firm conclusion, lower the evidence level instead of overstating certainty.
+  confidence:
+    required: true
+    allowed:
+      - high
+      - medium
+      - low
+    description: Confidence in the interpretation of the available evidence, separate from severity.
+  impact:
+    required: true
+    dimensions:
+      maintainability:
+        allowed: [none, low, medium, high]
+      changeability:
+        allowed: [none, low, medium, high]
+      testability:
+        allowed: [none, low, medium, high]
+      reliability:
+        allowed: [none, low, medium, high]
+      user_experience:
+        allowed: [none, low, medium, high]
+      delivery_risk:
+        allowed: [none, low, medium, high]
+  change_pressure:
+    required: true
+    allowed:
+      - high
+      - medium
+      - low
+      - unknown
+    description: Likelihood that this area will need to change or be extended in the foreseeable development path.
+  remediation_risk:
+    required: true
+    allowed:
+      - high
+      - medium
+      - low
+      - unknown
+    description: Risk that addressing the observation causes regressions, broad behavior changes or difficult migrations.
+  remediation_effort:
+    required: true
+    allowed:
+      - large
+      - medium
+      - small
+      - unknown
+  enabling_effect:
+    required: true
+    allowed:
+      - high
+      - medium
+      - low
+      - none
+    description: How strongly resolving this observation simplifies or de-risks later work.
+  before_further_development:
+    required: true
+    allowed:
+      - must_fix_before
+      - should_fix_before
+      - can_fix_in_parallel
+      - can_defer
+      - not_applicable
+    rationale_required: true
+  relationships:
+    required: true
+    relation_types:
+      - depends_on
+      - enables
+      - duplicates
+      - amplifies
+      - conflicts_with
+      - related_to
+    item_fields:
+      - observation_id
+      - relation
+      - rationale
+  preserve_constraints:
+    required: true
+    description: Existing behaviors, boundaries, abstractions or UX properties that remediation must preserve.
+  proposed_direction:
+    required_for:
+      - design_problem
+      - improvement_opportunity
+    description: High-level direction only; detailed sequencing belongs in the solution strategy.
+  validation_notes:
+    required: false
+    description: Specific checks that would strengthen, verify or falsify the observation.
+
+prioritization:
+  principles:
+    - Severity is not the same as remediation priority.
+    - Prefer high-value, low-risk changes when they do not violate dependencies.
+    - Prefer enabling changes before later work they simplify or de-risk.
+    - Respect dependency order even when a dependent observation has higher severity.
+    - Penalize low-value, high-risk remediation.
+    - Preserve successful boundaries and user-visible behavior unless there is a justified reason to change them.
+  derived_priority_inputs:
+    - severity
+    - evidence_level
+    - confidence
+    - impact
+    - change_pressure
+    - remediation_risk
+    - remediation_effort
+    - enabling_effect
+    - relationships
+    - before_further_development
+  forbidden_shortcuts:
+    - sort_by_severity_only
+    - treat_file_size_as_design_problem
+    - treat_low_test_coverage_as_design_problem_without_context
+    - recommend_big_bang_rewrite_without_strong_evidence
