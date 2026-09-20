@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["contract_version", "purpose", "principles", "primary_tool", "interpretation_rules", "runtime_fallback"],
+  "properties": {
+    "contract_version": {"const": 1},
+    "purpose": {"type": "string", "minLength": 1},
+    "principles": {"type": "array", "minItems": 3, "items": {"type": "string", "minLength": 1}},
+    "primary_tool": {
+      "type": "object",
+      "required": ["id", "implementation", "output_format", "mutates_source_tree", "dependencies", "collected_evidence", "failure_policy"],
+      "properties": {
+        "id": {"const": "source-tree-inventory"},
+        "implementation": {"const": "scripts/analyze_source_tree.py"},
+        "output_format": {"const": "json"},
+        "mutates_source_tree": {"const": false},
+        "dependencies": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "collected_evidence": {"type": "array", "minItems": 4, "items": {"type": "string"}},
+        "supported_function_scanners": {"type": "object"},
+        "supported_import_scanners": {"type": "array", "items": {"type": "string"}},
+        "failure_policy": {"type": "object"}
+      },
+      "additionalProperties": true
+    },
+    "interpretation_rules": {"type": "array", "minItems": 3, "items": {"type": "string", "minLength": 1}},
+    "runtime_fallback": {
+      "type": "object",
+      "required": ["when_code_execution_unavailable"],
+      "properties": {"when_code_execution_unavailable": {"type": "string", "minLength": 1}}
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,20 @@
+schema_version: 1
+id: EVAL-001
+title: Liten välstrukturerad kodbas
+category: analysis
+scenario:
+  summary: En liten tjänst har tydliga lager, korta beroendekedjor och tester runt domänlogiken.
+  inputs:
+    - Ett källkodsträd med controller, application service, domain och repository.
+    - Kort arkitekturdokumentation som stämmer med implementationen.
+  signals:
+    - Några filer är relativt stora men har sammanhållet ansvar.
+    - Beroenderiktningen är konsekvent och testbarheten är god.
+expected:
+  - Identifiera fungerande design och preserve constraints.
+  - Hålla antalet problemobservationer proportionerligt till evidensen.
+  - Kunna avsluta i focused mode om systembilden är tillräcklig.
+forbidden:
+  - Skapa designproblem enbart för att filer är stora.
+  - Föreslå omfattande omarkitektur utan konkret nytta.
+coverage_tags: [small_well_structured, preserve_good_design]

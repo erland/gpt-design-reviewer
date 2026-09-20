@@ -1,0 +1,617 @@
+schema_version: 1
+project:
+  id: design-reviewer
+  name: Design Reviewer
+  description: GPT-projekt för evidensbaserad design review av ett eller flera källkodsträd, prioriterad
+    lösningsstrategi och LLM-anpassad implementationsplan.
+  profile: zip_first_advanced
+instructions:
+  canonical: assistant/instructions.md
+  core_contract:
+    enabled: true
+    required_markers:
+    - '## Design Review'
+    - '## Evidens'
+    - '## Tre slutartefakter'
+    - '## Stegvis analys'
+    required_runtime_dependencies: []
+    max_required_file_hops: 1
+    knowledge_may_not_be_required_for_core_behavior: true
+knowledge_architecture:
+  canonical_root: knowledge
+  custom_gpt:
+    priority:
+    - knowledge/*.md
+structure:
+  runtime_policy:
+    path: assistant/policies
+  conversation_starters:
+    path: conversation-starters
+  schemas:
+    path: schemas
+  templates:
+    path: templates
+capabilities:
+  contract_version: 1
+  recommendation_mode: inferred_from_use_case
+  ask_user_only_when_business_choice_is_ambiguous: true
+  schema: schemas/capability-contract.schema.json
+  requirements:
+    web:
+      level: optional
+      reason: Extern webbresearch är sekundär och används endast när aktuell extern information behövs.
+    filesystem:
+      read: required
+      write: required
+    shell:
+      level: recommended
+      reason: Deterministisk inventering av större kodträd kan förbättra evidensen.
+    code_execution:
+      level: recommended
+      reason: Små analysverktyg kan ge reproducerbar statistik och beroendeindikatorer.
+    structured_data:
+      level: recommended
+      reason: Observationer, evidens och analysstatus behöver kunna representeras konsekvent.
+    persistent_state:
+      level: required
+      reason: Större design reviews ska kunna delas upp och återupptas utan att chatthistoriken är enda
+        sanningskälla.
+    external_tools:
+      level: optional
+      reason: Externa verktyg kan ge kompletterande evidens men är inte ett krav för kärnflödet.
+    image_generation:
+      level: not_required
+      reason: Bildgenerering behövs inte för design review-flödet.
+  capability_catalog:
+  - id: source_tree_ingestion
+    requirement: required
+    purpose: Läsa och förstå ett eller flera källkodsträd som primär analysinput.
+    runtime_primitives:
+    - filesystem.read
+    - archive.extract
+    - filesystem.list
+  - id: documentation_ingestion
+    requirement: required
+    purpose: Läsa tillhörande teknisk och funktionell dokumentation och jämföra den med implementationen.
+    runtime_primitives:
+    - filesystem.read
+    - filesystem.search
+  - id: codebase_inventory
+    requirement: required
+    purpose: Inventera teknikstack, kataloger, moduler och huvudsakliga komponenter innan bedömningar
+      görs.
+    depends_on:
+    - source_tree_ingestion
+    runtime_primitives:
+    - filesystem.list
+    - filesystem.search
+    - code_execution
+  - id: architecture_inference
+    requirement: required
+    purpose: Härleda sannolik arkitektur, ansvarsfördelning och viktiga beroenderiktningar från kod och
+      dokumentation.
+    depends_on:
+    - codebase_inventory
+    - documentation_ingestion
+    runtime_primitives:
+    - filesystem.read
+    - filesystem.search
+    - structured_data
+  - id: design_hotspot_detection
+    requirement: required
+    purpose: Identifiera områden som motiverar fördjupad designanalys utan att likställa storlek med designfel.
+    depends_on:
+    - codebase_inventory
+    - architecture_inference
+    runtime_primitives:
+    - filesystem.search
+    - code_execution
+    - structured_data
+  - id: design_review_analysis
+    requirement: required
+    purpose: Analysera designproblem, styrkor, förändringsbarhet, testbarhet, koppling och ansvarsfördelning.
+    depends_on:
+    - architecture_inference
+    - design_hotspot_detection
+    runtime_primitives:
+    - filesystem.read
+    - filesystem.search
+    - structured_data
+  - id: evidence_tracking
+    requirement: required
+    purpose: Knyta varje viktig observation till konkret evidens och en explicit evidensnivå.
+    depends_on:
+    - design_review_analysis
+    runtime_primitives:
+    - structured_data
+    - persistent_state
+  - id: cross_tree_analysis
+    requirement: required
+    purpose: Analysera kopplingar och designproblem som uppstår mellan flera repositories eller källkodsträd.
+    depends_on:
+    - source_tree_ingestion
+    - architecture_inference
+    runtime_primitives:
+    - filesystem.read
+    - filesystem.search
+    - structured_data
+  - id: solution_prioritization
+    requirement: required
+    purpose: Prioritera lösningar efter nytta, risk, förändringstryck, beroenden och möjliggörande effekt.
+    depends_on:
+    - design_review_analysis
+    - evidence_tracking
+    runtime_primitives:
+    - structured_data
+  - id: implementation_planning
+    requirement: required
+    purpose: Bryta ned lösningsstrategin till genomförandesteg som ryms i en prompt per steg.
+    depends_on:
+    - solution_prioritization
+    runtime_primitives:
+    - structured_data
+    - filesystem.write
+  - id: markdown_artifact_generation
+    requirement: required
+    purpose: Skapa de tre obligatoriska Markdown-artefakterna som nedladdningsbara filer.
+    depends_on:
+    - design_review_analysis
+    - solution_prioritization
+    - implementation_planning
+    runtime_primitives:
+    - filesystem.write
+  - id: incremental_analysis
+    requirement: required
+    purpose: Dela större analyser i kontrollerade steg med checkpoint efter materiell förändring.
+    runtime_primitives:
+    - persistent_state
+    - structured_data
+  - id: resume_analysis
+    requirement: required
+    purpose: Återuppta en tidigare analys från explicit workspace-state utan att chatthistoriken är enda
+      sanningskälla.
+    depends_on:
+    - incremental_analysis
+    runtime_primitives:
+    - persistent_state
+    - filesystem.read
+    - filesystem.write
+reporting:
+  design_review:
+    contract: contracts/design-review-report-contract.yaml
+    report_schema: schemas/design-review-report.schema.json
+    report_template: templates/design-review.md
+    output_artifact: design_review
+    diagnostic_only: true
+    final_remediation_order_in_strategy: true
+  recommended_solution_strategy:
+    contract: contracts/solution-strategy-report-contract.yaml
+    report_schema: schemas/solution-strategy-report.schema.json
+    report_template: templates/recommended-solution-strategy.md
+    output_artifact: recommended_solution_strategy
+    strategic_only: true
+    implementation_steps_in_plan: true
+  implementation_planning:
+    contract: contracts/implementation-planning-contract.yaml
+    planning_schema: schemas/implementation-planning.schema.json
+    source_strategy_report: recommended_solution_strategy
+    step_id_pattern: IP-[0-9]{3,}
+    one_prompt_one_checkpoint: true
+    report_contract: contracts/implementation-plan-report-contract.yaml
+    report_schema: schemas/implementation-plan-report.schema.json
+    report_template: templates/implementation-plan.md
+    output_artifact: implementation_plan
+observation_model:
+  contract_version: 1
+  path: contracts/design-observation-contract.yaml
+  schema: schemas/design-observation.schema.json
+  id_pattern: DR-[0-9]{3,}
+  severity_is_not_priority: true
+  required_dimensions:
+  - severity
+  - evidence_level
+  - confidence
+  - impact
+  - change_pressure
+  - remediation_risk
+  - remediation_effort
+  - enabling_effect
+  - relationships
+  - preserve_constraints
+artifacts:
+  contract_version: 1
+  schema: schemas/artifact-contract.schema.json
+  outputs:
+    design_review:
+      kind: document
+      format: markdown
+      requirement: required
+      persistence: persistent
+      multiplicity: one
+      filename_pattern: design-review.md
+      description: Evidensbaserad design review-rapport.
+    recommended_solution_strategy:
+      kind: document
+      format: markdown
+      requirement: required
+      persistence: persistent
+      multiplicity: one
+      filename_pattern: recommended-solution-strategy.md
+      description: Prioriterad lösningsstrategi baserad på nytta, risk och beroenden.
+    implementation_plan:
+      kind: document
+      format: markdown
+      requirement: required
+      persistence: persistent
+      multiplicity: one
+      filename_pattern: implementation-plan.md
+      description: LLM-anpassad genomförandeplan med ett prompt-stort steg i taget.
+    project_package:
+      kind: package
+      format: zip
+      requirement: required
+      persistence: persistent
+      multiplicity: one
+      filename_pattern: design-reviewer-project.zip
+      description: Komplett canonical projektpaket för fortsatt utveckling och återupptagning.
+    runtime_package:
+      kind: distribution
+      format: zip
+      requirement: conditional
+      condition: Respektive runtime-adapter är implementerad och aktiverad.
+      persistence: persistent
+      multiplicity: many
+      description: Genererade peer runtime-distributioner från canonical projektet.
+workspace_state:
+  contract_version: 1
+  schema: schemas/workspace-state-contract.schema.json
+  workspace:
+    requirement: required
+    persistence: required
+    portable: true
+    separate_from_assistant: true
+    artifact: project_package
+    description: Analysworkspace ska kunna sparas och flyttas oberoende av assistentdistributionen.
+  state:
+    requirement: required
+    persistence: required
+    authority: workspace_file
+    format: yaml
+    path: project-status.yaml
+    conversation_fallback: false
+    description: Explicit state krävs för flerstegsanalys och återupptagning.
+  runtime_preferences:
+    chat: conversation_or_file
+    agent: workspace_file
+  analysis_state:
+    incremental: true
+    checkpoint_policy: after_each_analysis_step
+    resume_command: Gör nästa steg
+    required_sections:
+    - source_trees
+    - documentation
+    - system_inventory
+    - architecture_model
+    - analyzed_areas
+    - remaining_areas
+    - hotspots
+    - preliminary_observations
+    - verified_observations
+    - evidence_gaps
+    - preserve_constraints
+    - current_analysis_step
+    - generated_artifacts
+tools:
+  contract_version: 1
+  schema: schemas/tool-contract.schema.json
+  tools:
+  - id: filesystem-read
+    type: runtime_capability
+    requirement: required
+    purpose: Läsa filer och källkod utan att mutera analysunderlaget.
+    capability: filesystem.read
+    deterministic: true
+    mutates_workspace: false
+    runtime_fallback: block
+  - id: filesystem-list-search
+    type: runtime_capability
+    requirement: required
+    purpose: Inventera katalogträd och söka efter symboler, imports, konfiguration och återkommande mönster.
+    capability: filesystem.list_and_search
+    deterministic: true
+    mutates_workspace: false
+    runtime_fallback: block
+  - id: archive-extract
+    type: runtime_capability
+    requirement: required
+    purpose: Öppna ZIP-baserade källkodsträd och göra dem tillgängliga för analys.
+    capability: archive.extract
+    deterministic: true
+    mutates_workspace: true
+    runtime_fallback: manual
+  - id: filesystem-write
+    type: runtime_capability
+    requirement: required
+    purpose: Skriva analysstate och de tre Markdown-slutartefakterna.
+    capability: filesystem.write
+    deterministic: true
+    mutates_workspace: true
+    runtime_fallback: manual
+  - id: structured-state
+    type: runtime_capability
+    requirement: required
+    purpose: Representera observationer, evidens, beroenden och checkpoint-state strukturerat.
+    capability: structured_data
+    deterministic: true
+    mutates_workspace: true
+    runtime_fallback: manual
+  - id: code-execution
+    type: runtime_capability
+    requirement: recommended
+    purpose: Köra små deterministiska inventerings- och analysverktyg som stöd för evidens, aldrig som
+      ersättning för semantisk designbedömning.
+    capability: code_execution
+    deterministic: true
+    mutates_workspace: false
+    runtime_fallback: degrade
+  - id: web-research
+    type: runtime_capability
+    requirement: optional
+    purpose: Verifiera aktuell extern dokumentation, standarder eller ramverksrekommendationer endast
+      när uppgiften kräver det.
+    capability: web.search_and_read
+    deterministic: false
+    mutates_workspace: false
+    runtime_fallback: degrade
+  - id: source-tree-inventory-script
+    type: script
+    requirement: recommended
+    purpose: Samla reproducerbar fil-, storleks-, funktions-, import- och dupliceringsindikator-evidens
+      från ett källkodsträd.
+    capability: code_execution
+    deterministic: true
+    mutates_workspace: false
+    runtime_fallback: degrade
+    script: scripts/analyze_source_tree.py
+runtime:
+  primary: none
+  candidates:
+    chatgpt_chat:
+      suitability: full
+      activate_by_default: true
+      implementation_status: implemented
+    chatgpt_custom:
+      suitability: full
+      activate_by_default: true
+      implementation_status: implemented
+    claude_projects:
+      suitability: full
+      activate_by_default: true
+      implementation_status: implemented
+    opencode:
+      suitability: full
+      activate_by_default: true
+      implementation_status: implemented
+  chat_zip:
+    enabled: true
+    role: peer_distribution
+    entrypoint: START-HERE.md
+    start_here_template: templates/START-HERE.chat.md.tpl
+    layout:
+      assistant: assistant
+      knowledge: knowledge
+      schemas: schemas
+      scripts: scripts
+      templates: templates
+      runtime: assistant/runtime-contract.json
+    include:
+      instructions:
+      - assistant/instructions.md
+      policies:
+      - assistant/policies/*.md
+      conversation_starters:
+      - conversation-starters/*.md
+      knowledge: []
+      schemas:
+      - schemas/*.json
+      scripts:
+      - scripts/analyze_source_tree.py
+      templates:
+      - templates/*.md
+    exclude:
+    - docs/**
+    - project-status.yaml
+    - STATUS.md
+    - PROJECT.md
+    - README.md
+    - evals/**
+    - contracts/**
+    - scripts/build_distributions.py
+    - scripts/lint_gpt_project.py
+    - scripts/project_hygiene.py
+    - scripts/recommend_next_step.py
+    - scripts/run_evals.py
+    - scripts/validate_distributions.py
+    manifest:
+      required: true
+      checksums: true
+    deterministic_build: true
+  custom_gpt:
+    enabled: true
+    role: peer_distribution
+    instruction:
+      mode: compressed
+      max_characters: 8000
+      source: assistant/instructions.custom-gpt.md
+    knowledge:
+      max_files: 20
+      strategy: prioritize
+    builder:
+      runtime_contract: builder/runtime-contract.json
+    templates:
+      capabilities: templates/capabilities.md.tpl
+      readme: templates/README.custom-gpt.md.tpl
+      compatibility: templates/COMPATIBILITY.md.tpl
+  claude:
+    enabled: true
+    role: peer_distribution
+    project:
+      instructions: project/instructions.md
+      knowledge: project/knowledge
+      runtime_contract: project/runtime-contract.json
+    templates:
+      readme: templates/README.claude-projects.md.tpl
+  opencode:
+    enabled: true
+    role: peer_distribution
+    layout:
+      instructions: AGENTS.md
+      config: opencode.json
+      runtime_contract: .opencode/design-reviewer-runtime.json
+      knowledge: .opencode/knowledge
+      tools: .opencode/tools
+      runtime_scripts: .opencode/runtime-scripts
+    skills:
+      enabled: true
+      directory: .opencode/skills
+      definitions:
+      - id: design-review-workflow
+        name: design-review-workflow
+        description: Genomför evidensbaserad Design Reviewer-analys stegvis och producerar de tre canonical
+          Markdown-artefakterna.
+        workflow:
+        - Inventera källkodsträd och dokumentation innan designbedömningar görs.
+        - Välj focused eller progressive workflow utifrån faktisk kontext- och arkitekturkomplexitet.
+        - Använd deterministiska verktyg som evidensstöd och verifiera alltid hotspots semantiskt i koden.
+        - Upprätthåll explicit checkpoint-state så att `Gör nästa steg` kan fortsätta utan omanalys.
+        - Kör evidence gate innan slutartefakterna skapas.
+        - Skapa `design-review.md`, därefter `recommended-solution-strategy.md` och sist `implementation-plan.md`.
+        references:
+        - contracts/analysis-workflow-contract.yaml
+        - contracts/design-observation-contract.yaml
+        - contracts/design-review-report-contract.yaml
+        - contracts/solution-prioritization-contract.yaml
+        - contracts/implementation-planning-contract.yaml
+    templates:
+      readme: templates/README.opencode.md.tpl
+build_system:
+  targets:
+  - project
+  - chat
+  - custom-gpt
+  - claude
+  - opencode
+  runtime_targets:
+    chat:
+      runtime_id: chatgpt_chat
+      runtime_key: chat_zip
+      builder: chat
+      filename_pattern: <project-id>-chat-<version>.zip
+      artifact_type: chat_zip
+    custom-gpt:
+      runtime_id: chatgpt_custom
+      runtime_key: custom_gpt
+      builder: custom_gpt
+      filename_pattern: <project-id>-custom-gpt-<version>.zip
+      artifact_type: custom_gpt_zip
+    claude:
+      runtime_id: claude_project
+      runtime_key: claude
+      builder: claude
+      filename_pattern: <project-id>-claude-<version>.zip
+      artifact_type: claude_project_zip
+    opencode:
+      runtime_id: opencode
+      runtime_key: opencode
+      builder: opencode
+      filename_pattern: <project-id>-opencode-<version>.zip
+      artifact_type: opencode_zip
+workflow:
+  create_project_package_on_first_execution_step: true
+  resume_from_project_package: true
+  incremental_analysis: true
+ci:
+  enabled: true
+  workflow: .github/workflows/ci.yml
+  activation_step: 20
+release:
+  github:
+    enabled: true
+    workflow: .github/workflows/release.yml
+    activation_step: 20
+    trigger: published_release
+    version_source: github.event.release.tag_name
+    artifact_globs:
+    - dist/*.zip
+    - dist/SHA256SUMS.txt
+    - dist/DELIVERY-MANIFEST.json
+testing:
+  enabled: true
+  contract_version: 1
+  suite_contract: contracts/eval-suite-contract.yaml
+  case_schema: schemas/eval-case.schema.json
+  cases_path: evals/cases
+  runner: scripts/run_evals.py
+  structural_evals_required: true
+  runtime_behavior_evals:
+    activation: after_runtime_adapter_exists
+resume:
+  supported: true
+  requires_previous_chat_history: false
+contracts:
+  capability:
+    path: gpt-project.yaml
+    schema: schemas/capability-contract.schema.json
+  artifact:
+    path: gpt-project.yaml
+    schema: schemas/artifact-contract.schema.json
+  workspace_state:
+    path: gpt-project.yaml
+    schema: schemas/workspace-state-contract.schema.json
+  tool:
+    path: gpt-project.yaml
+    schema: schemas/tool-contract.schema.json
+analysis_workflow:
+  contract_version: 1
+  path: contracts/analysis-workflow-contract.yaml
+  schema: schemas/analysis-workflow.schema.json
+  modes:
+  - focused
+  - progressive
+  resume_command: Gör nästa steg
+  hotspot_first_not_hotspot_only: true
+  checkpoint_policy: after_each_material_analysis_increment
+  final_stage_requires_evidence_gate: true
+solution_prioritization:
+  contract_version: 1
+  path: contracts/solution-prioritization-contract.yaml
+  schema: schemas/solution-prioritization.schema.json
+  ordering_model: constrained_qualitative_ordering
+  numeric_score_required: false
+  strategy_id_pattern: RS-[0-9]{2,}
+  validation_action_pattern: VA-[0-9]{2,}
+  ux_alternative_pattern: UX-[0-9]{2,}
+  priority_bands:
+  - P0
+  - P1
+  - P2
+  - P3
+  - PX
+  severity_is_not_priority: true
+implementation_planning:
+  contract_version: 1
+  path: contracts/implementation-planning-contract.yaml
+  schema: schemas/implementation-planning.schema.json
+  step_id_pattern: IP-[0-9]{3,}
+  sizing_model: one_prompt_one_checkpoint
+  resume_command: Gör nästa steg
+  requires_explicit_non_goals: true
+  requires_verification: true
+  requires_done_criteria: true
+deterministic_analysis_tools:
+  contract_version: 1
+  path: contracts/deterministic-analysis-tools.yaml
+  schema: schemas/deterministic-analysis-tools.schema.json
+  primary_script: scripts/analyze_source_tree.py
+  evidence_only: true
+  core_review_blocks_if_unavailable: false

@@ -1,0 +1,34 @@
+schema_version: 1
+suite:
+  id: design-reviewer-core-regression
+  case_schema: schemas/eval-case.schema.json
+  cases_glob: evals/cases/*.yaml
+  runner: scripts/run_evals.py
+  purpose: >-
+    Regressionskontroll av Design Reviewers canonical beteende innan och efter runtime-adaptrar.
+execution_layers:
+  - id: structural
+    deterministic: true
+    description: Validerar evalfiler, täckning, ID:n och suite-invariants utan modellkörning.
+  - id: runtime_behavior
+    deterministic: false
+    activation: after_runtime_adapter_exists
+    description: Kör senare samma scenarier mot en runtime och bedömer expected/forbidden behavior.
+required_coverage_tags:
+  - small_well_structured
+  - monolithic_codebase
+  - multiple_repositories
+  - false_hotspot_large_file
+  - high_severity_high_risk_fix
+  - enabling_refactoring_first
+  - ux_requirement_simplification
+  - insufficient_evidence
+  - preserve_good_design
+suite_invariants:
+  - every_case_has_expected_and_forbidden_behavior
+  - severity_must_not_imply_priority
+  - hotspot_signal_must_not_become_problem_without_semantic_evidence
+  - insufficient_evidence_must_not_be_upgraded_to_verified_problem
+  - preserve_constraints_must_survive_strategy_and_plan
+  - ux_requirement_change_must_be_presented_as_explicit_alternative
+  - cross_tree_findings_require_evidence_from_relevant_trees

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://design-reviewer.local/schemas/eval-case.schema.json",
+  "title": "Design Reviewer eval case",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "id", "title", "category", "scenario", "expected", "forbidden", "coverage_tags"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "id": {"type": "string", "pattern": "^EVAL-[0-9]{3}$"},
+    "title": {"type": "string", "minLength": 3},
+    "category": {"type": "string", "enum": ["analysis", "evidence", "prioritization", "planning", "preservation", "cross_tree", "ux_requirements"]},
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "inputs", "signals"],
+      "properties": {
+        "summary": {"type": "string", "minLength": 10},
+        "inputs": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "signals": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "expected": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "forbidden": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "coverage_tags": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}},
+    "notes": {"type": "string"}
+  }
+}

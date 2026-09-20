@@ -1,0 +1,193 @@
+contract_version: 1
+artifact:
+  id: recommended_solution_strategy
+  filename: recommended-solution-strategy.md
+  format: markdown
+  purpose: >-
+    Present a traceable, prioritized remediation strategy derived from the design review.
+    The strategy explains ordering, tradeoffs, prerequisites, preserve constraints and alternatives
+    without yet decomposing the work into prompt-sized implementation steps.
+
+inputs:
+  required:
+    - design_review_observations
+    - observation_relationships
+    - development_gates
+    - preserve_constraints
+    - solution_prioritization_result
+  optional:
+    - validation_actions
+    - product_or_ux_alternatives
+    - delivery_constraints
+    - roadmap_or_expected_changes
+
+principles:
+  - Every committed remediation theme must trace back to one or more DR-* observations or an explicit cross-cutting constraint.
+  - Stable RS-* identifiers from the prioritization model must be preserved.
+  - Priority band and actual sequence must be explained; do not present ordering as self-evident.
+  - Preserve constraints and user-visible behavior that should remain stable must be explicit.
+  - Validation actions and product/UX alternatives must remain distinct from committed technical remediation.
+  - Deferred and rejected actions need a rationale.
+  - Do not turn strategy themes into implementation tasks; prompt-sized decomposition belongs in implementation-plan.md.
+
+sections:
+  - id: strategy_summary
+    heading: Rekommenderad strategi
+    required: true
+    content:
+      - overall_direction
+      - intended_outcomes
+      - most_important_ordering_logic
+      - major_constraints
+  - id: strategy_basis
+    heading: Underlag och spårbarhet
+    required: true
+    content:
+      - source_design_review
+      - observation_ids_considered
+      - important_development_gates
+      - evidence_limitations_affecting_strategy
+  - id: ordering_constraints
+    heading: Ordnings- och beroendekrav
+    required: true
+    content:
+      - hard_prerequisites
+      - evidence_gates
+      - preserve_constraints
+      - migration_or_delivery_constraints
+  - id: prioritized_themes
+    heading: Prioriterade åtgärdsteman
+    required: true
+    repeat_for_each_theme: true
+    theme_fields:
+      - id
+      - priority_band
+      - title
+      - addresses
+      - objective
+      - why_now
+      - benefit
+      - confidence
+      - cost
+      - risk
+      - enabling_effect
+      - dependencies
+      - preserves
+      - recommended_approach
+      - validation
+      - ordering_rationale
+  - id: validation_actions
+    heading: Valideringsåtgärder före beslut
+    required: true
+    repeat_for_each_action: true
+    action_fields:
+      - id
+      - uncertainty
+      - related_observations
+      - why_validation_is_needed
+      - validation_method
+      - decision_enabled
+  - id: product_or_ux_alternatives
+    heading: Krav- eller UX-alternativ
+    required: true
+    repeat_for_each_alternative: true
+    alternative_fields:
+      - id
+      - current_complexity_driver
+      - proposed_alternative
+      - related_observations
+      - user_value_gains
+      - user_value_losses
+      - technical_effect
+      - decision_owner_or_required_decision
+      - fallback_technical_strategy
+  - id: deferred_or_rejected_actions
+    heading: Uppskjutna eller avrådda åtgärder
+    required: true
+    content:
+      - deferred_actions
+      - rejected_actions
+      - reason_for_deferral_or_rejection
+      - revisit_trigger
+  - id: preserve_constraints
+    heading: Strukturer och egenskaper som ska bevaras
+    required: true
+    content:
+      - behavior_to_preserve
+      - stable_boundaries
+      - abstractions_to_preserve
+      - user_experience_to_preserve
+      - operational_or_contractual_constraints
+  - id: recommended_sequence
+    heading: Rekommenderad ordning
+    required: true
+    content:
+      - ordered_theme_ids
+      - phase_grouping_if_useful
+      - sequence_rationale
+      - safe_parallel_work
+    rule: >-
+      The sequence may group themes into phases, but it must remain strategic rather than
+      decomposing themes into prompt-sized implementation steps.
+  - id: implementation_handoff
+    heading: Underlag för implementationsplanen
+    required: true
+    content:
+      - themes_to_decompose
+      - hard_dependencies
+      - validation_prerequisites
+      - preserve_constraints
+      - verification_expectations
+      - explicit_non_goals
+
+rendering:
+  theme_heading_pattern: "{id} – {title}"
+  required_theme_labels:
+    - Prioritet
+    - Adresserar
+    - Mål
+    - Varför nu
+    - Nytta
+    - Evidens och säkerhet
+    - Kostnad
+    - Risk
+    - Möjliggörande effekt
+    - Beroenden
+    - Bevara
+    - Rekommenderad ansats
+    - Verifiering
+    - Ordningsmotivering
+  validation_heading_pattern: "{id} – Valideringsåtgärd"
+  ux_heading_pattern: "{id} – Krav/UX-alternativ"
+
+traceability:
+  observation_ids_required: true
+  stable_strategy_ids_required: true
+  priority_band_required: true
+  sequence_rationale_required: true
+  preserve_constraints_required: true
+  handoff_to_implementation_plan_required: true
+
+handoff:
+  next_artifact: implementation-plan.md
+  required_inputs:
+    - ordered_strategy_themes
+    - validation_prerequisites
+    - hard_dependencies
+    - preserve_constraints
+    - verification_expectations
+    - explicit_non_goals
+  forbidden_outputs:
+    - prompt_sized_steps
+    - file_by_file_edit_instructions
+    - exact_patch_plan
+
+forbidden_shortcuts:
+  - reproduce_design_review_without_strategy_synthesis
+  - list_priority_bands_without_explaining_sequence
+  - hide_dependency_constraints
+  - omit_preserve_constraints
+  - mix_validation_actions_with_committed_remediation
+  - treat_product_or_ux_alternative_as_accepted_without_user_decision
+  - turn_strategy_themes_into_implementation_steps
+  - defer_actions_without_rationale

@@ -1,0 +1,208 @@
+contract_version: 1
+artifact:
+  id: implementation_plan
+  filename: implementation-plan.md
+  format: markdown
+  purpose: >-
+    Present the executable implementation sequence derived from the recommended solution strategy.
+    The plan must be usable by the same or another LLM one prompt at a time, preserve strategy
+    dependencies and constraints, and provide enough verification and checkpoint state to resume
+    with 'Gör nästa steg' without repeating the design review.
+
+inputs:
+  required:
+    - recommended_solution_strategy
+    - implementation_planning_result
+    - ordered_strategy_themes
+    - hard_dependencies
+    - preserve_constraints
+    - verification_expectations
+  optional:
+    - validation_actions
+    - accepted_product_or_ux_decisions
+    - repository_layout
+    - build_and_test_commands
+    - delivery_constraints
+    - branch_or_pr_constraints
+    - migration_constraints
+
+principles:
+  - Use stable IP-* identifiers and preserve their execution order unless new evidence requires an explicit plan update.
+  - Every implementation step must trace to one or more RS-*, VA-* or explicitly accepted UX-* items.
+  - A step must be executable as one coherent prompt-sized checkpoint, not merely describe a strategy theme.
+  - Every step must define scope, non-goals, prerequisites, preserve constraints, verification and done criteria.
+  - The plan must distinguish steps that change behavior from behavior-preserving structural work.
+  - Product or UX alternatives must never be treated as accepted unless that decision is explicit.
+  - The executor should not need to reconstruct the original prioritization rationale to know what to do next.
+  - Material deviations, newly discovered prerequisites and verification results must be recorded as checkpoints.
+
+sections:
+  - id: plan_summary
+    heading: Genomförandeplan
+    required: true
+    content:
+      - purpose
+      - source_strategy
+      - execution_model
+      - overall_constraints
+      - completion_definition
+  - id: execution_rules
+    heading: Regler för genomförande
+    required: true
+    content:
+      - one_prompt_one_checkpoint
+      - preserve_constraints
+      - dependency_rules
+      - accepted_decisions
+      - validation_before_implementation
+      - scope_change_rule
+  - id: verification_baseline
+    heading: Gemensam verifieringsbas
+    required: true
+    content:
+      - known_build_commands
+      - known_test_commands
+      - regression_expectations
+      - architectural_checks
+      - migration_or_recovery_expectations
+  - id: execution_sequence
+    heading: Översiktlig genomförandeordning
+    required: true
+    content:
+      - ordered_step_ids
+      - phase_grouping_if_useful
+      - hard_dependencies
+      - safe_parallel_work
+      - blocked_steps
+  - id: implementation_steps
+    heading: Genomförandesteg
+    required: true
+    repeat_for_each_step: true
+    step_fields:
+      - id
+      - title
+      - status
+      - source_strategy_items
+      - related_observations
+      - objective
+      - rationale
+      - scope
+      - changes
+      - non_goals
+      - prerequisites
+      - preserve_constraints
+      - behavioral_effect
+      - verification
+      - done_criteria
+      - risk_notes
+      - continuation
+  - id: decision_and_validation_gates
+    heading: Besluts- och valideringsgrindar
+    required: true
+    content:
+      - unresolved_validation_actions
+      - product_or_ux_decisions_required
+      - decision_effect_on_steps
+      - fallback_paths
+  - id: checkpoint_log
+    heading: Checkpoint-logg
+    required: true
+    content:
+      - completed_step_ids
+      - verification_evidence
+      - material_deviations
+      - newly_discovered_prerequisites
+      - plan_updates
+  - id: resume_state
+    heading: Återupptagning
+    required: true
+    content:
+      - next_incomplete_step
+      - prerequisite_status
+      - current_blockers
+      - relevant_checkpoint_notes
+      - default_resume_command
+
+rendering:
+  step_heading_pattern: "{id} – {title}"
+  required_step_labels:
+    - Status
+    - Härledd från
+    - Relaterade observationer
+    - Mål
+    - Motiv
+    - Scope
+    - Förändringar
+    - Gör inte
+    - Förutsättningar
+    - Bevara
+    - Beteendeeffekt
+    - Verifiering
+    - Klart när
+    - Risknotering
+    - Fortsättning
+  status_values:
+    - planned
+    - in_progress
+    - blocked
+    - completed
+    - skipped
+    - superseded
+  default_resume_command: 'Gör nästa steg'
+
+traceability:
+  stable_step_ids_required: true
+  source_strategy_ids_required: true
+  related_observation_ids_when_relevant: true
+  dependency_visibility_required: true
+  preserve_constraints_required: true
+  verification_required: true
+  done_criteria_required: true
+  checkpoint_log_required: true
+  resume_state_required: true
+
+execution_handoff:
+  executor_receives:
+    - current_ip_step
+    - prerequisites_status
+    - source_strategy_items
+    - objective
+    - scope
+    - changes
+    - non_goals
+    - preserve_constraints
+    - verification
+    - done_criteria
+    - relevant_checkpoint_notes
+  after_success:
+    - record_verification_evidence
+    - mark_current_step_completed
+    - record_material_deviations
+    - update_new_prerequisites_if_any
+    - select_next_executable_incomplete_step
+  when_blocked:
+    - record_concrete_blocker
+    - preserve_partial_checkpoint_if_coherent
+    - do_not_mark_step_completed
+    - identify_required_decision_or_prerequisite
+
+quality_checks:
+  - Every committed RS-* theme has one or more implementation steps or an explicit no-step rationale.
+  - Every IP-* step maps to valid source strategy or validation/decision items.
+  - The ordered step graph has no unresolved dependency cycle.
+  - Every step has explicit verification and done criteria.
+  - Broad changes have explicit non-goals and preserve constraints.
+  - No step silently assumes an unresolved UX/product decision.
+  - High-risk work has appropriate validation, enabling or migration protection where justified.
+  - Completed steps have checkpoint evidence sufficient for reliable resume.
+  - The next step can be selected without re-running the design review.
+
+forbidden_shortcuts:
+  - copy_rs_themes_as_ip_steps_without_decomposition
+  - omit_non_goals_on_broad_steps
+  - omit_verification_or_done_criteria
+  - hide_unresolved_decisions_inside_implementation_steps
+  - mark_steps_completed_without_checkpoint_evidence
+  - combine_unrelated_cleanup_with_the_current_step
+  - use_chat_history_as_the_only_resume_state_when_persistent_state_is_available
+  - require_full_design_reanalysis_before_next_step

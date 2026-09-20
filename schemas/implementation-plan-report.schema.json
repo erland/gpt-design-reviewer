@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://design-reviewer.local/schemas/implementation-plan-report.schema.json",
+  "title": "Design Reviewer Implementation Plan Report Contract",
+  "type": "object",
+  "required": [
+    "contract_version",
+    "artifact",
+    "inputs",
+    "principles",
+    "sections",
+    "traceability",
+    "execution_handoff",
+    "quality_checks",
+    "forbidden_shortcuts"
+  ],
+  "properties": {
+    "contract_version": {"type": "integer", "minimum": 1},
+    "artifact": {
+      "type": "object",
+      "required": ["id", "filename", "format", "purpose"],
+      "properties": {
+        "id": {"const": "implementation_plan"},
+        "filename": {"const": "implementation-plan.md"},
+        "format": {"const": "markdown"},
+        "purpose": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": true
+    },
+    "inputs": {"type": "object"},
+    "principles": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "sections": {
+      "type": "array",
+      "minItems": 8,
+      "items": {
+        "type": "object",
+        "required": ["id", "heading", "required"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "heading": {"type": "string", "minLength": 1},
+          "required": {"type": "boolean"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "rendering": {
+      "type": "object",
+      "properties": {
+        "step_heading_pattern": {"type": "string", "minLength": 1},
+        "required_step_labels": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "status_values": {"type": "array", "minItems": 4, "items": {"type": "string"}},
+        "default_resume_command": {"const": "Gör nästa steg"}
+      },
+      "additionalProperties": true
+    },
+    "traceability": {
+      "type": "object",
+      "required": [
+        "stable_step_ids_required",
+        "source_strategy_ids_required",
+        "dependency_visibility_required",
+        "preserve_constraints_required",
+        "verification_required",
+        "done_criteria_required",
+        "checkpoint_log_required",
+        "resume_state_required"
+      ],
+      "properties": {
+        "stable_step_ids_required": {"const": true},
+        "source_strategy_ids_required": {"const": true},
+        "dependency_visibility_required": {"const": true},
+        "preserve_constraints_required": {"const": true},
+        "verification_required": {"const": true},
+        "done_criteria_required": {"const": true},
+        "checkpoint_log_required": {"const": true},
+        "resume_state_required": {"const": true}
+      },
+      "additionalProperties": true
+    },
+    "execution_handoff": {
+      "type": "object",
+      "required": ["executor_receives", "after_success", "when_blocked"],
+      "properties": {
+        "executor_receives": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "after_success": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "when_blocked": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+      },
+      "additionalProperties": true
+    },
+    "quality_checks": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "forbidden_shortcuts": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+  },
+  "additionalProperties": true
+}

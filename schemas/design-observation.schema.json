@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Design Reviewer observation contract",
+  "type": "object",
+  "required": ["contract_version", "observation", "prioritization"],
+  "properties": {
+    "contract_version": {"type": "integer", "const": 1},
+    "observation": {
+      "type": "object",
+      "required": ["id", "title", "kind", "affected_areas", "observation", "evidence", "severity", "evidence_level", "confidence", "impact", "change_pressure", "remediation_risk", "remediation_effort", "enabling_effect", "before_further_development", "relationships", "preserve_constraints"],
+      "properties": {
+        "id": {"type": "object"},
+        "title": {"type": "object"},
+        "kind": {"type": "object"},
+        "affected_areas": {"type": "object"},
+        "observation": {"type": "object"},
+        "evidence": {"type": "object"},
+        "rationale": {"type": "object"},
+        "consequence": {"type": "object"},
+        "severity": {"type": "object"},
+        "evidence_level": {"type": "object"},
+        "confidence": {"type": "object"},
+        "impact": {"type": "object"},
+        "change_pressure": {"type": "object"},
+        "remediation_risk": {"type": "object"},
+        "remediation_effort": {"type": "object"},
+        "enabling_effect": {"type": "object"},
+        "before_further_development": {"type": "object"},
+        "relationships": {"type": "object"},
+        "preserve_constraints": {"type": "object"},
+        "proposed_direction": {"type": "object"},
+        "validation_notes": {"type": "object"}
+      },
+      "additionalProperties": false
+    },
+    "prioritization": {
+      "type": "object",
+      "required": ["principles", "derived_priority_inputs", "forbidden_shortcuts"],
+      "properties": {
+        "principles": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "derived_priority_inputs": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "forbidden_shortcuts": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,20 @@
+schema_version: 1
+id: EVAL-005
+title: Hög severity men riskfylld åtgärd
+category: prioritization
+scenario:
+  summary: Ett allvarligt designproblem sitter i en central komponent utan tillräckliga regressionstester.
+  inputs:
+    - Ett verifierat high-severity DR-fynd.
+    - Begränsad testbarhet runt berörd komponent.
+  signals:
+    - Direkt omskrivning har hög remediation risk.
+    - En mindre seam/testability-förändring kan minska risken först.
+expected:
+  - Låta beroenden och risk påverka ordningen även när severity är hög.
+  - Föreslå enabling steg eller validering före den riskfyllda kärnändringen.
+  - Behålla det allvarliga problemet synligt i strategin.
+forbidden:
+  - Sortera åtgärder enbart efter severity.
+  - Tolka förberedande steg som att huvudproblemet är oviktigt.
+coverage_tags: [high_severity_high_risk_fix, enabling_refactoring_first]

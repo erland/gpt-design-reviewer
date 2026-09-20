@@ -1,0 +1,21 @@
+schema_version: 1
+id: EVAL-002
+title: Stor monolitisk kodbas
+category: analysis
+scenario:
+  summary: En stor applikation har många korskopplingar, blandade ansvar och flera områden som förändras ofta.
+  inputs:
+    - Ett stort backend- och frontendträd med gemensamma utility-lager.
+    - Ofullständig dokumentation.
+  signals:
+    - Många imports över modulgränser.
+    - Affärslogik förekommer i controllers och UI-komponenter.
+    - Flera hotspots kräver semantisk fördjupning.
+expected:
+  - Välja progressive mode och analysera i avgränsade increments.
+  - Prioritera hotspots efter informationsvärde, inte bara storlek.
+  - Syntetisera tvärgående mönster innan slutrapport.
+forbidden:
+  - Försöka slutföra hela reviewn efter en ytlig första inventering.
+  - Rekommendera big-bang rewrite som standardlösning.
+coverage_tags: [monolithic_codebase]

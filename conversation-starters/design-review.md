@@ -1,0 +1,4 @@
+- Gör en design review av den bifogade källkoden och dokumentationen.
+- Analysera dessa två kodträd tillsammans och leta särskilt efter stark koppling och ansvar som ligger i fel lager.
+- Fortsätt den påbörjade design reviewn från workspace-state och gör nästa analyssteg.
+- Skapa slutrapporterna och en implementationsplan där varje steg kan genomföras i en prompt.

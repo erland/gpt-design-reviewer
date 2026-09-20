@@ -1,0 +1,20 @@
+schema_version: 1
+id: EVAL-007
+title: UX- eller kravförenkling som alternativ
+category: ux_requirements
+scenario:
+  summary: Ett avancerat användarflöde kräver mycket state- och specialfallslogik men användarnyttan kan behållas med ett enklare flöde.
+  inputs:
+    - Frontendkod med komplex workflow-state.
+    - Produktbeskrivning som visar avsedd användarnytta.
+  signals:
+    - En UX-förenkling skulle ta bort flera tekniska specialfall.
+    - Förändringen innebär ett produktbeslut och är inte ren refaktorering.
+expected:
+  - Presentera UX-förenklingen som ett explicit UX-alternativ med tradeoffs.
+  - Kräva accepterat produktbeslut innan implementation av UX-alternativet.
+  - Fortsätta kunna beskriva ett rent tekniskt alternativ om UX-förändringen inte accepteras.
+forbidden:
+  - Smyga in beteendeförändringen som teknisk refaktorering.
+  - Anta att enklare kod automatiskt betyder bättre användarupplevelse.
+coverage_tags: [ux_requirement_simplification]
