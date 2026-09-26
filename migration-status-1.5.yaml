@@ -14,12 +14,13 @@ migration:
   total_steps: 9
 
 progress:
-  current_step: 4
-  last_completed_step: 3
+  current_step: 5
+  last_completed_step: 4
   completed_steps:
     - 1
     - 2
     - 3
+    - 4
   skipped_steps: []
   inserted_steps: []
 
@@ -99,9 +100,24 @@ registry:
     advisory_only: true
   ci_passed: true
 
-next_step:
-  recommended: 4
-  title: Verifiera Chat-distributionen
-  reason: "Runtime-set, artifact patterns och compatibility är nu deklarativa i GPT Byggaren 1.5.0-registryt. Standard-build, runtime parity och CI använder registryt utan att ändra distributionsinnehållet."
+chat_verification:
+  validation: scripts/validate_chat_gpt_builder_1_5.py
+  status: passed
+  canonical_instruction_byte_identical: true
+  runtime_contract_matches_canonical: true
+  state_authority: workspace_file
+  state_path: project-status.yaml
+  conversation_authoritative: false
+  resume_command: "Gör nästa steg"
+  canonical_artifacts_preserved: true
+  tool_fallback_semantics_preserved: true
+  deterministic_analysis_script: scripts/analyze_source_tree.py
+  deterministic_analysis_script_fallback: degrade
+  ci_passed: true
 
-human_readable_status: "Steg 1–3 av 9 i GPT Byggaren 1.5.0-migreringen är klara."
+next_step:
+  recommended: 5
+  title: Verifiera Custom GPT
+  reason: "Chat-distributionen passerar nu GPT Byggaren 1.5.0-verifiering för canonical instruktion, runtime-contract, workspace/resume-state, canonical artifacts och tool fallback semantics."
+
+human_readable_status: "Steg 1–4 av 9 i GPT Byggaren 1.5.0-migreringen är klara."
