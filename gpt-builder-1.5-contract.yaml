@@ -89,7 +89,7 @@ runtime_policy:
     claude: reduced
     opencode: equivalent
   openai_plugin:
-    status: assessment_pending
+    status: not_active
     target: reduced
     advisory_only: true
 
