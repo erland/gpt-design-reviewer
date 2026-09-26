@@ -52,6 +52,9 @@ jobs:
       - name: Validate exact registry asset set
         run: python scripts/validate_release_assets_1_5.py --version 0.0.0-ci --dir dist
 
+      - name: Validate final GPT Builder 1.5 readiness
+        run: python scripts/validate_gpt_builder_1_5_release_readiness.py
+
       - name: Check runtime parity
         run: python scripts/check_runtime_parity.py --project-root .
       - name: Upload CI build artifacts
