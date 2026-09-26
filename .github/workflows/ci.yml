@@ -30,6 +30,9 @@ jobs:
 
       - name: Validate GPT Builder 1.5 runtime registry
         run: python scripts/validate_runtime_distribution_registry.py
+
+      - name: Validate OpenAI Plugin 1.5 assessment
+        run: python scripts/validate_openai_plugin_1_5_assessment.py
       - name: Run structural evals
         run: python scripts/run_evals.py --project-root .
       - name: Check source-tree hygiene before build
