@@ -1,0 +1,101 @@
+schema_version: 1
+builder:
+  target_version: 1.5.0
+  strategy: normalize_existing_canonical_contract
+  behavior_preserving: true
+
+canonical:
+  project_contract: gpt-project.yaml
+  instruction: assistant/instructions.md
+  product_status: project-status.yaml
+
+contracts:
+  capabilities:
+    source: gpt-project.yaml
+    key: capabilities
+    required:
+      - source_tree_ingestion
+      - documentation_ingestion
+      - codebase_inventory
+      - architecture_inference
+      - design_hotspot_detection
+      - design_review_analysis
+      - evidence_tracking
+      - cross_tree_analysis
+      - solution_prioritization
+      - implementation_planning
+      - markdown_artifact_generation
+      - incremental_analysis
+      - resume_analysis
+  artifacts:
+    source: gpt-project.yaml
+    key: artifacts.outputs
+    required:
+      design_review: design-review.md
+      recommended_solution_strategy: recommended-solution-strategy.md
+      implementation_plan: implementation-plan.md
+      project_package: design-reviewer-project.zip
+  state:
+    source: gpt-project.yaml
+    key: workspace_state
+    authority: workspace_file
+    state_path: project-status.yaml
+    persistent: required
+    portable_workspace: true
+    separate_from_assistant: true
+    conversation_authoritative: false
+    checkpoint_policy: after_each_analysis_step
+    resume_command: "Gör nästa steg"
+    incremental: true
+  tools:
+    source: gpt-project.yaml
+    key: tools
+    required:
+      - filesystem-read
+      - filesystem-list-search
+      - archive-extract
+      - filesystem-write
+      - structured-state
+      - code-execution
+      - web-research
+      - source-tree-inventory-script
+    deterministic_analysis_is_evidence_only: true
+
+behavior:
+  analysis_modes:
+    - focused
+    - progressive
+  evidence_gate_required: true
+  severity_is_not_priority: true
+  numeric_priority_score_required: false
+  one_prompt_one_checkpoint: true
+  resume_without_previous_chat_history: true
+  stable_id_families:
+    - DR
+    - RS
+    - VA
+    - UX
+    - IP
+
+runtime_policy:
+  active:
+    - chat
+    - custom-gpt
+    - claude
+    - opencode
+  compatibility:
+    chat: equivalent_runtime_dependent
+    custom-gpt: equivalent_with_platform_constraints
+    claude: reduced
+    opencode: equivalent
+  openai_plugin:
+    status: assessment_pending
+    target: reduced
+    advisory_only: true
+
+preservation:
+  product_plan_complete_20_20: true
+  runtime_behavior: true
+  resume_semantics: true
+  artifact_semantics: true
+  evals: true
