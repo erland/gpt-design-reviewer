@@ -24,6 +24,9 @@ jobs:
           python -m pip install pyyaml jsonschema
       - name: Lint project
         run: python scripts/lint_gpt_project.py --project-root .
+
+      - name: Validate GPT Builder 1.5 canonical contract
+        run: python scripts/validate_gpt_builder_1_5_contract.py
       - name: Run structural evals
         run: python scripts/run_evals.py --project-root .
       - name: Check source-tree hygiene before build
