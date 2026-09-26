@@ -14,11 +14,12 @@ migration:
   total_steps: 9
 
 progress:
-  current_step: 3
-  last_completed_step: 2
+  current_step: 4
+  last_completed_step: 3
   completed_steps:
     - 1
     - 2
+    - 3
   skipped_steps: []
   inserted_steps: []
 
@@ -78,9 +79,29 @@ gpt_builder_1_5:
   deterministic_analysis_evidence_only: true
   ci_passed: true
 
-next_step:
-  recommended: 3
-  title: Inför runtime/distribution registry
-  reason: "Design Reviewers capability-, artifact-, workspace/state- och tool-kontrakt är nu explicit normaliserade mot GPT Byggaren 1.5.0 och verifierade i CI utan ändrat produktbeteende."
+registry:
+  source_of_truth: runtime-distribution-registry.yaml
+  validation: scripts/validate_runtime_distribution_registry.py
+  builder_target_version: 1.5.0
+  runtime_selection: active_targets
+  artifact_policy: exact_active_target_set
+  active_targets:
+    - chat
+    - custom-gpt
+    - claude
+    - opencode
+  build_defaults_use_registry: true
+  runtime_parity_uses_registry: true
+  ci_uses_registry_default_targets: true
+  openai_plugin:
+    status: assessment_pending
+    compatibility: reduced
+    advisory_only: true
+  ci_passed: true
 
-human_readable_status: "Steg 1–2 av 9 i GPT Byggaren 1.5.0-migreringen är klara."
+next_step:
+  recommended: 4
+  title: Verifiera Chat-distributionen
+  reason: "Runtime-set, artifact patterns och compatibility är nu deklarativa i GPT Byggaren 1.5.0-registryt. Standard-build, runtime parity och CI använder registryt utan att ändra distributionsinnehållet."
+
+human_readable_status: "Steg 1–3 av 9 i GPT Byggaren 1.5.0-migreringen är klara."
