@@ -39,9 +39,15 @@ jobs:
       - name: Check source-tree hygiene before build
         run: python scripts/project_hygiene.py --project-root . --mode final
       - name: Build all release distributions
-        run: python scripts/build_distributions.py --project-root . --version "${{ steps.version.outputs.version }}" --targets project,chat,custom-gpt,claude,opencode
+        run: python scripts/build_distributions.py --project-root . --version "${{ steps.version.outputs.version }}"
       - name: Validate distributions
         run: python scripts/validate_distributions.py --project-root .
+
+      - name: Validate GPT Builder 1.5 release runtime artifacts
+        run: python scripts/validate_runtime_artifacts_1_5.py --version "${{ steps.version.outputs.version }}" --dir dist
+
+      - name: Validate exact release asset set
+        run: python scripts/validate_release_assets_1_5.py --version "${{ steps.version.outputs.version }}" --dir dist
       - name: Check runtime parity
         run: python scripts/check_runtime_parity.py --project-root .
       - name: Upload release artifacts
@@ -50,8 +56,5 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh release upload "${{ github.event.release.tag_name }}" \
-            dist/*.zip \
-            dist/SHA256SUMS.txt \
-            dist/DELIVERY-MANIFEST.json \
-            --clobber
+          mapfile -t assets < <(python scripts/validate_release_assets_1_5.py --version "${{ steps.version.outputs.version }}" --dir dist --print-paths)
+          gh release upload "${{ github.event.release.tag_name }}" "${assets[@]}" --clobber
