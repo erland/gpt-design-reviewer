@@ -72,3 +72,20 @@ Härled aktiva runtimes, validering och release-assets från registryt och verif
 
 ### 9. Slutlig release-readiness
 Synka README/STATUS, lägg final 9/9-gate och verifiera mergebar PR.
+
+
+## Slutstatus
+
+Migreringen är genomförd **9/9**.
+
+Slutlig runtime-status:
+
+- ChatGPT Chat — `equivalent_runtime_dependent`
+- ChatGPT Custom GPT — `equivalent_with_platform_constraints`
+- Claude Projects — `reduced`
+- OpenCode — `equivalent`
+- OpenAI Plugin — `not_active / reduced / advisory_only`
+
+Canonical Design Reviewer-beteende, 20/20-produktstatus, DR/RS/VA/UX/IP-semantik, focused/progressive workflow, evidence gate, explicit workspace/checkpoint-state, `Gör nästa steg` och de tre slutartefakterna är bevarade.
+
+CI, runtime parity och GitHub Release använder samma `runtime-distribution-registry.yaml`. Aktiva runtime-artifacts valideras mot sina 1.5-kontrakt och exakt release-asset-set verifieras före publicering.
