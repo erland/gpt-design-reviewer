@@ -14,10 +14,11 @@ migration:
   total_steps: 9
 
 progress:
-  current_step: 2
-  last_completed_step: 1
+  current_step: 3
+  last_completed_step: 2
   completed_steps:
     - 1
+    - 2
   skipped_steps: []
   inserted_steps: []
 
@@ -25,7 +26,6 @@ state:
   overall: warning
   blocking_issues: []
   warnings:
-    - "Canonical Design Reviewer-kontrakt behöver normaliseras mot GPT Byggaren 1.5.0."
     - "OpenAI Plugin compatibility assessment återstår."
 
 preservation:
@@ -65,9 +65,22 @@ resume:
   explicit_state_required: true
   conversation_history_authoritative: false
 
-next_step:
-  recommended: 2
-  title: Normalisera canonical kontrakt mot GPT Byggaren 1.5.0
-  reason: "Separat migrationsspår finns nu. Nästa steg är att normalisera capability-, artifact-, workspace/state- och tool-kontrakten utan att ändra Design Reviewers produktbeteende."
+gpt_builder_1_5:
+  normalized_contract: gpt-builder-1.5-contract.yaml
+  validation: scripts/validate_gpt_builder_1_5_contract.py
+  canonical_instruction: assistant/instructions.md
+  state_authority: workspace_file
+  state_path: project-status.yaml
+  conversation_authoritative: false
+  resume_command: "Gör nästa steg"
+  product_plan_20_20_preserved: true
+  canonical_artifacts_preserved: true
+  deterministic_analysis_evidence_only: true
+  ci_passed: true
 
-human_readable_status: "Steg 1 av 9 i GPT Byggaren 1.5.0-migreringen är klart."
+next_step:
+  recommended: 3
+  title: Inför runtime/distribution registry
+  reason: "Design Reviewers capability-, artifact-, workspace/state- och tool-kontrakt är nu explicit normaliserade mot GPT Byggaren 1.5.0 och verifierade i CI utan ändrat produktbeteende."
+
+human_readable_status: "Steg 1–2 av 9 i GPT Byggaren 1.5.0-migreringen är klara."
