@@ -14,8 +14,8 @@ migration:
   total_steps: 9
 
 progress:
-  current_step: 7
-  last_completed_step: 6
+  current_step: 8
+  last_completed_step: 7
   completed_steps:
     - 1
     - 2
@@ -23,6 +23,7 @@ progress:
     - 4
     - 5
     - 6
+    - 7
   skipped_steps: []
   inserted_steps: []
 
@@ -30,7 +31,6 @@ state:
   overall: warning
   blocking_issues: []
   warnings:
-    - "OpenAI Plugin compatibility assessment återstår."
 
 preservation:
   canonical_instruction: assistant/instructions.md
@@ -160,9 +160,29 @@ opencode_verification:
   workspace_state_authority: workspace_file
   conversation_authoritative: false
 
-next_step:
-  recommended: 7
-  title: OpenAI Plugin compatibility assessment
-  reason: "Claude Projects och OpenCode passerar nu separata GPT Byggaren 1.5.0-gates. Claude behåller reduced parity utan inbäddade lokala verktyg; OpenCode behåller equivalent workspace parity med skill, custom tool, projectRoot och permission-policy."
+openai_plugin_assessment:
+  document: docs/openai-plugin-1.5-assessment.md
+  validation: scripts/validate_openai_plugin_1_5_assessment.py
+  status: not_active
+  compatibility: reduced
+  advisory_only: true
+  active_distribution: false
+  build_target: false
+  release_asset: false
+  full_peer_parity: false
+  requires_for_activation:
+    - source_tree_file_access
+    - persistent_workspace_state
+    - filesystem_write
+    - reliable_validation
+    - canonical_artifact_generation
+    - project_package_generation
+    - no_false_pass
+  ci_passed: true
 
-human_readable_status: "Steg 1–6 av 9 i GPT Byggaren 1.5.0-migreringen är klara."
+next_step:
+  recommended: 8
+  title: Generalisera CI, parity och release
+  reason: "OpenAI Plugin är nu formellt låst som not_active/reduced/advisory_only och regressionstestad utan aktiv distribution, build target eller release asset."
+
+human_readable_status: "Steg 1–7 av 9 i GPT Byggaren 1.5.0-migreringen är klara."
