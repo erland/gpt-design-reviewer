@@ -1,0 +1,209 @@
+schema_version: 1
+project:
+  id: design-reviewer
+  name: Design Reviewer
+  product_plan:
+    status: complete
+    completed_step: 20
+    total_steps: 20
+
+migration:
+  target_builder_version: 1.5.0
+  strategy: behavior_preserving
+  plan: docs/gpt-builder-1.5-runtime-migration.md
+  total_steps: 9
+
+progress:
+  current_step: 9
+  last_completed_step: 9
+  completed_steps:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+  skipped_steps: []
+  inserted_steps: []
+
+state:
+  overall: pass
+  blocking_issues: []
+  warnings: []
+
+preservation:
+  canonical_instruction: assistant/instructions.md
+  project_contract: gpt-project.yaml
+  product_status: project-status.yaml
+  human_status: STATUS.md
+  preserve_product_plan_20_20: true
+  preserve_runtime_behavior: true
+  preserve_resume_semantics: true
+  preserve_artifact_semantics: true
+  preserve_evals: true
+
+runtime_baseline:
+  active:
+    - chat
+    - custom-gpt
+    - claude
+    - opencode
+  intended_compatibility:
+    chat: equivalent_runtime_dependent
+    custom-gpt: equivalent_with_platform_constraints
+    claude: reduced
+    opencode: equivalent
+  openai_plugin:
+    status: not_active
+    intended_target: reduced
+    advisory_only: true
+
+canonical_artifacts:
+  - design-review.md
+  - recommended-solution-strategy.md
+  - implementation-plan.md
+
+resume:
+  command: "Gör nästa steg"
+  explicit_state_required: true
+  conversation_history_authoritative: false
+
+gpt_builder_1_5:
+  normalized_contract: gpt-builder-1.5-contract.yaml
+  validation: scripts/validate_gpt_builder_1_5_contract.py
+  canonical_instruction: assistant/instructions.md
+  state_authority: workspace_file
+  state_path: project-status.yaml
+  conversation_authoritative: false
+  resume_command: "Gör nästa steg"
+  product_plan_20_20_preserved: true
+  canonical_artifacts_preserved: true
+  deterministic_analysis_evidence_only: true
+  ci_passed: true
+
+registry:
+  source_of_truth: runtime-distribution-registry.yaml
+  validation: scripts/validate_runtime_distribution_registry.py
+  builder_target_version: 1.5.0
+  runtime_selection: active_targets
+  artifact_policy: exact_active_target_set
+  active_targets:
+    - chat
+    - custom-gpt
+    - claude
+    - opencode
+  build_defaults_use_registry: true
+  runtime_parity_uses_registry: true
+  ci_uses_registry_default_targets: true
+  openai_plugin:
+    status: not_active
+    compatibility: reduced
+    advisory_only: true
+  ci_passed: true
+
+chat_verification:
+  validation: scripts/validate_chat_gpt_builder_1_5.py
+  status: passed
+  canonical_instruction_byte_identical: true
+  runtime_contract_matches_canonical: true
+  state_authority: workspace_file
+  state_path: project-status.yaml
+  conversation_authoritative: false
+  resume_command: "Gör nästa steg"
+  canonical_artifacts_preserved: true
+  tool_fallback_semantics_preserved: true
+  deterministic_analysis_script: scripts/analyze_source_tree.py
+  deterministic_analysis_script_fallback: degrade
+  ci_passed: true
+
+custom_gpt_verification:
+  validation: scripts/validate_custom_gpt_builder_1_5.py
+  status: passed
+  instruction_within_budget: true
+  core_behavior_markers_preserved: true
+  knowledge_traceability_preserved: true
+  runtime_tool_execution: not_embedded
+  workspace_state_authority: workspace_file
+  conversation_authoritative: false
+  deterministic_inventory_tool:
+    state: reduced
+    fallback: degrade
+  unrun_verification_explicit: true
+  false_pass_forbidden: true
+  false_workspace_mutation_claim_forbidden: true
+  false_artifact_generation_claim_forbidden: true
+  ci_passed: true
+
+claude_verification:
+  validation: scripts/validate_claude_gpt_builder_1_5.py
+  status: passed
+  compatibility: reduced
+  canonical_instruction_byte_identical: true
+  embedded_local_tools: false
+  deterministic_inventory_script: missing
+  workspace_state_authority: workspace_file
+  conversation_authoritative: false
+  executable_runtime_scripts_packaged: false
+
+opencode_verification:
+  validation: scripts/validate_opencode_gpt_builder_1_5.py
+  status: passed
+  compatibility: equivalent
+  workspace_first: true
+  custom_tool_integration: true
+  workflow_skill_present: true
+  explicit_project_root: true
+  bash_permission: ask
+  edit_permission: ask
+  inventory_tool_permission: allow
+  workspace_state_authority: workspace_file
+  conversation_authoritative: false
+
+openai_plugin_assessment:
+  document: docs/openai-plugin-1.5-assessment.md
+  validation: scripts/validate_openai_plugin_1_5_assessment.py
+  status: not_active
+  compatibility: reduced
+  advisory_only: true
+  active_distribution: false
+  build_target: false
+  release_asset: false
+  full_peer_parity: false
+  requires_for_activation:
+    - source_tree_file_access
+    - persistent_workspace_state
+    - filesystem_write
+    - reliable_validation
+    - canonical_artifact_generation
+    - project_package_generation
+    - no_false_pass
+  ci_passed: true
+
+release_readiness:
+  registry: runtime-distribution-registry.yaml
+  runtime_validation: scripts/validate_runtime_artifacts_1_5.py
+  release_asset_validation: scripts/validate_release_assets_1_5.py
+  build_uses_registry_default_targets: true
+  parity_uses_registry: true
+  ci_runtime_gates_use_registry: true
+  release_runtime_gates_use_registry: true
+  exact_runtime_zip_set_required: true
+  github_release_uses_validated_asset_list: true
+  wildcard_runtime_selection: false
+  ci_passed: true
+
+final_readiness:
+  documentation_synced: true
+  product_plan_20_20_preserved: true
+  migration_complete: true
+  final_validation: scripts/validate_gpt_builder_1_5_release_readiness.py
+
+next_step:
+  recommended: merge
+  title: Merge migrations-PR
+  reason: "GPT Byggaren 1.5.0-migreringen är komplett 9/9. Fyra aktiva runtimes är verifierade, OpenAI Plugin är advisory only och build/release är registry-drivna."
+
+human_readable_status: "GPT Byggaren 1.5.0-migreringen är klar 9/9. PR kan mergas när slutlig CI är grön."

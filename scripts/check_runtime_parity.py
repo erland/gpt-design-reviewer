@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 import argparse, json, sys, zipfile
 from pathlib import Path
+import yaml
 
-RUNTIMES = {
-    'chat': ('design-reviewer-chat-', 'assistant/runtime-contract.json'),
-    'custom-gpt': ('design-reviewer-custom-gpt-', 'builder/runtime-contract.json'),
-    'claude': ('design-reviewer-claude-', 'project/runtime-contract.json'),
-    'opencode': ('design-reviewer-opencode-', '.opencode/design-reviewer-runtime.json'),
-}
+def load_runtimes(root: Path):
+    registry=yaml.safe_load((root/'runtime-distribution-registry.yaml').read_text(encoding='utf-8'))
+    result={}
+    for rid in registry['active_targets']:
+        target=registry['targets'][rid]
+        pattern=target['artifact_pattern']
+        prefix=pattern.split('{version}',1)[0]
+        result[rid]=(prefix,target['contract_member'])
+    return result
 SECTIONS = ('capabilities','artifacts','workspace_state')
 
 def latest_zip(dist: Path, prefix: str):
@@ -23,8 +27,9 @@ def main():
     ap.add_argument('--project-root', default='.')
     args=ap.parse_args()
     root=Path(args.project_root).resolve(); dist=root/'dist'
+    runtimes=load_runtimes(root)
     contracts={}; failures=[]
-    for name,(prefix,member) in RUNTIMES.items():
+    for name,(prefix,member) in runtimes.items():
         z=latest_zip(dist,prefix)
         if not z:
             failures.append(f'{name}: distribution missing')

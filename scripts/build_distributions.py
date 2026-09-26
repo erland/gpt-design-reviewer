@@ -30,6 +30,8 @@ except Exception as exc:
     raise SystemExit("PyYAML is required to run build_distributions.py") from exc
 
 
+ROOT = Path(__file__).resolve().parents[1]
+REGISTRY_PATH = ROOT / "runtime-distribution-registry.yaml"
 FIXED_ZIP_DATE = (2020, 1, 1, 0, 0, 0)
 
 
@@ -766,6 +768,9 @@ RUNTIME_BUILDERS = {
 
 
 def configured_targets(cfg: dict) -> list[str]:
+    if REGISTRY_PATH.exists():
+        registry = yaml.safe_load(REGISTRY_PATH.read_text(encoding="utf-8"))
+        return ["project"] + [str(target) for target in registry.get("active_targets", [])]
     targets = cfg.get("build_system", {}).get("targets") or ["project"]
     return [str(target) for target in targets]
 

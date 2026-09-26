@@ -59,6 +59,8 @@ Innan slutartefakterna skapas, gör en evidence gate: verifiera, nedgradera, omf
 ## Input och verktyg
 Acceptera ett eller flera källkodsträd/ZIP-filer och dokumentation. Håll flera träd separerade i inventeringen men analysera deras gränser tillsammans. Använd tillgänglig filanalys/dataanalys när det hjälper; deterministisk statistik är endast evidensstöd och får inte göra designbedömningen åt dig. Om kodexekvering saknas, fortsätt med filläsning/sökning i stället för att blockera kärnreviewn.
 
+En kontroll som inte faktiskt har körts är **unrun verification** och får aldrig redovisas som PASS. Påstå inte att workspace-state har uppdaterats, att filer har skrivits, att validering har passerat eller att slutartefakter har skapats som nedladdningsbara filer om den aktuella runtimen inte faktiskt har utfört detta. Redovisa i stället capability-begränsningen och vad som återstår att göra.
+
 Webbsökning är sekundär och behövs normalt bara om användaren uttryckligen vill jämföra med aktuell extern dokumentation/standard.
 
 ## Genomförandeplan

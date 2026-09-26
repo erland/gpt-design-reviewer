@@ -1,0 +1,73 @@
+schema_version: 1
+registry_id: design-reviewer-runtime-distributions
+builder_contract:
+  target_version: 1.5.0
+  normalized_contract: gpt-builder-1.5-contract.yaml
+  project_contract: gpt-project.yaml
+  runtime_selection: active_targets
+  artifact_policy: exact_active_target_set
+  version_source:
+    ci: explicit_build_argument
+    release: github_release_tag
+
+active_targets:
+  - chat
+  - custom-gpt
+  - claude
+  - opencode
+
+inactive_targets:
+  openai_plugin:
+    status: not_active
+    compatibility: reduced
+    advisory_only: true
+
+project_artifact:
+  id: project
+  artifact_pattern: design-reviewer-project.zip
+
+targets:
+  chat:
+    status: active
+    runtime_id: chatgpt_chat
+    runtime_key: chat_zip
+    builder: chat
+    artifact_pattern: design-reviewer-chat-{version}.zip
+    compatibility: equivalent_runtime_dependent
+    contract_member: assistant/runtime-contract.json
+  custom-gpt:
+    status: active
+    runtime_id: chatgpt_custom
+    runtime_key: custom_gpt
+    builder: custom_gpt
+    artifact_pattern: design-reviewer-custom-gpt-{version}.zip
+    compatibility: equivalent_with_platform_constraints
+    contract_member: builder/runtime-contract.json
+  claude:
+    status: active
+    runtime_id: claude_project
+    runtime_key: claude
+    builder: claude
+    artifact_pattern: design-reviewer-claude-{version}.zip
+    compatibility: reduced
+    contract_member: project/runtime-contract.json
+  opencode:
+    status: active
+    runtime_id: opencode
+    runtime_key: opencode
+    builder: opencode
+    artifact_pattern: design-reviewer-opencode-{version}.zip
+    compatibility: equivalent
+    contract_member: .opencode/design-reviewer-runtime.json
+
+derived_artifacts:
+  checksums: SHA256SUMS.txt
+  manifest: DELIVERY-MANIFEST.json
+
+release:
+  runtime_assets_from: active_targets
+  include_project_artifact: true
+  include_derived_artifacts:
+    - checksums
+    - manifest
+  wildcard_runtime_selection: false
