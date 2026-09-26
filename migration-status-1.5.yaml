@@ -14,14 +14,15 @@ migration:
   total_steps: 9
 
 progress:
-  current_step: 6
-  last_completed_step: 5
+  current_step: 7
+  last_completed_step: 6
   completed_steps:
     - 1
     - 2
     - 3
     - 4
     - 5
+    - 6
   skipped_steps: []
   inserted_steps: []
 
@@ -134,9 +135,34 @@ custom_gpt_verification:
   false_artifact_generation_claim_forbidden: true
   ci_passed: true
 
-next_step:
-  recommended: 6
-  title: Verifiera Claude Projects och OpenCode
-  reason: "Custom GPT passerar nu GPT Byggaren 1.5.0-verifiering för instruction budget, Knowledge-spårbarhet, reducerad tool/workspace-semantik och explicit no-false-PASS."
+claude_verification:
+  validation: scripts/validate_claude_gpt_builder_1_5.py
+  status: passed
+  compatibility: reduced
+  canonical_instruction_byte_identical: true
+  embedded_local_tools: false
+  deterministic_inventory_script: missing
+  workspace_state_authority: workspace_file
+  conversation_authoritative: false
+  executable_runtime_scripts_packaged: false
 
-human_readable_status: "Steg 1–5 av 9 i GPT Byggaren 1.5.0-migreringen är klara."
+opencode_verification:
+  validation: scripts/validate_opencode_gpt_builder_1_5.py
+  status: passed
+  compatibility: equivalent
+  workspace_first: true
+  custom_tool_integration: true
+  workflow_skill_present: true
+  explicit_project_root: true
+  bash_permission: ask
+  edit_permission: ask
+  inventory_tool_permission: allow
+  workspace_state_authority: workspace_file
+  conversation_authoritative: false
+
+next_step:
+  recommended: 7
+  title: OpenAI Plugin compatibility assessment
+  reason: "Claude Projects och OpenCode passerar nu separata GPT Byggaren 1.5.0-gates. Claude behåller reduced parity utan inbäddade lokala verktyg; OpenCode behåller equivalent workspace parity med skill, custom tool, projectRoot och permission-policy."
+
+human_readable_status: "Steg 1–6 av 9 i GPT Byggaren 1.5.0-migreringen är klara."
