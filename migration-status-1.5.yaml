@@ -14,13 +14,14 @@ migration:
   total_steps: 9
 
 progress:
-  current_step: 5
-  last_completed_step: 4
+  current_step: 6
+  last_completed_step: 5
   completed_steps:
     - 1
     - 2
     - 3
     - 4
+    - 5
   skipped_steps: []
   inserted_steps: []
 
@@ -115,9 +116,27 @@ chat_verification:
   deterministic_analysis_script_fallback: degrade
   ci_passed: true
 
-next_step:
-  recommended: 5
-  title: Verifiera Custom GPT
-  reason: "Chat-distributionen passerar nu GPT Byggaren 1.5.0-verifiering för canonical instruktion, runtime-contract, workspace/resume-state, canonical artifacts och tool fallback semantics."
+custom_gpt_verification:
+  validation: scripts/validate_custom_gpt_builder_1_5.py
+  status: passed
+  instruction_within_budget: true
+  core_behavior_markers_preserved: true
+  knowledge_traceability_preserved: true
+  runtime_tool_execution: not_embedded
+  workspace_state_authority: workspace_file
+  conversation_authoritative: false
+  deterministic_inventory_tool:
+    state: reduced
+    fallback: degrade
+  unrun_verification_explicit: true
+  false_pass_forbidden: true
+  false_workspace_mutation_claim_forbidden: true
+  false_artifact_generation_claim_forbidden: true
+  ci_passed: true
 
-human_readable_status: "Steg 1–4 av 9 i GPT Byggaren 1.5.0-migreringen är klara."
+next_step:
+  recommended: 6
+  title: Verifiera Claude Projects och OpenCode
+  reason: "Custom GPT passerar nu GPT Byggaren 1.5.0-verifiering för instruction budget, Knowledge-spårbarhet, reducerad tool/workspace-semantik och explicit no-false-PASS."
+
+human_readable_status: "Steg 1–5 av 9 i GPT Byggaren 1.5.0-migreringen är klara."
