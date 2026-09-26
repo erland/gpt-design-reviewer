@@ -48,6 +48,9 @@ jobs:
 
       - name: Validate exact release asset set
         run: python scripts/validate_release_assets_1_5.py --version "${{ steps.version.outputs.version }}" --dir dist
+
+      - name: Validate final GPT Builder 1.5 readiness
+        run: python scripts/validate_gpt_builder_1_5_release_readiness.py
       - name: Check runtime parity
         run: python scripts/check_runtime_parity.py --project-root .
       - name: Upload release artifacts
