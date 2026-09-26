@@ -38,6 +38,9 @@ jobs:
         run: python scripts/build_distributions.py --project-root . --version 0.0.0-ci
       - name: Validate distributions
         run: python scripts/validate_distributions.py --project-root .
+
+      - name: Validate GPT Builder 1.5 Chat distribution
+        run: python scripts/validate_chat_gpt_builder_1_5.py --artifact dist/design-reviewer-chat-0.0.0-ci.zip
       - name: Check runtime parity
         run: python scripts/check_runtime_parity.py --project-root .
       - name: Upload CI build artifacts
