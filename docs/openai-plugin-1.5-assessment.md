@@ -2,74 +2,59 @@
 
 ## Beslut
 
-OpenAI Plugin är **inte en aktiv peer runtime** för Design Reviewer i GPT Byggaren 1.5.0.
+OpenAI Plugin är en **aktiv peer runtime** för Design Reviewer.
 
 Målbilden är:
 
-- status: `not_active`
-- compatibility: `reduced`
-- mode: `advisory_only`
+- status: `active`
+- compatibility: `equivalent_runtime_dependent`
+- advisory_only: `false`
 
-Detta är ett medvetet preserve-first-beslut. Design Reviewers kärnflöde bygger på konkret projektmaterial, explicit state och spårbara artefakter. En plugin får inte betraktas som full peer runtime om dessa capabilities inte faktiskt finns och kan verifieras.
+Bedömningen bygger på att Design Reviewers semantiska kärnflöde inte kräver code execution. Kärnflödet kräver däremot faktisk host-capability för filesystem, ZIP/archive input och persistent workspace/state.
 
-## Kärnkrav för full peer-runtime parity
+## Runtimekrav
 
-Full parity kräver minst:
+För full faktisk körning behöver hosten:
 
-1. Åtkomst till ett eller flera kompletta källkodsträd/ZIP-filer.
-2. Möjlighet att läsa teknisk och funktionell dokumentation tillsammans med koden.
-3. Persistent workspace/state utanför chattminnet.
-4. Läsning och uppdatering av `project-status.yaml` som auktoritativ state.
-5. Stöd för `Gör nästa steg` utan att tidigare chatthistorik är enda sanningskälla.
-6. Faktisk skrivning av:
-   - `design-review.md`
-   - `recommended-solution-strategy.md`
-   - `implementation-plan.md`
-7. Möjlighet att skapa/uppdatera komplett project package.
-8. Tillförlitlig validering av state, artefakter och paketering.
-9. Kontrollerad mutation av workspace-filer med tydlig approval-/safety-gräns.
-10. No-false-PASS: unrun verification får aldrig redovisas som PASS.
+1. filesystem read/write för ett eller flera källkodsträd,
+2. ZIP/archive extraction för ZIP-baserad input,
+3. persistent workspace/state utanför chat memory,
+4. läsning och uppdatering av `project-status.yaml` som auktoritativ state,
+5. stöd för `Gör nästa steg` från explicit checkpoint,
+6. faktisk skrivning av `design-review.md`, `recommended-solution-strategy.md` och `implementation-plan.md`,
+7. structured data för observations- och evidensstate.
 
-## Tillåtet advisory-beteende
+## Code execution
 
-En reducerad advisory-plugin får bland annat:
+Code execution är **recommended**, inte required för den semantiska Design Review-kärnan.
 
-- förklara Design Reviewers observations- och prioriteringsmodell,
-- resonera om DR/RS/VA/UX/IP-semantik,
-- analysera användartillhandahållna kodutdrag eller dokumentutdrag,
-- föreslå hotspots och frågor att verifiera,
-- föreslå designobservationer med explicit evidensnivå,
-- föreslå lösningsstrategi och implementation themes,
-- föreslå innehåll till de tre slutartefakterna,
-- förklara befintliga validation-/eval-resultat som användaren tillhandahåller.
+Pluginen paketerar `scripts/analyze_source_tree.py` samt dess `scripts/lib/`-beroenden som script-resurs. När kompatibel code execution finns ska scriptet användas som reproducerbart evidensstöd.
 
-## Förbjudna claims utan backing capability
+Om code execution saknas ska pluginen **degrade** ärligt: fortsätt semantisk analys med faktisk filåtkomst, men markera script-härledd evidens som unavailable. Scriptresultat får aldrig simuleras.
 
-En advisory-plugin får inte utan faktisk capability hävda att:
+## Parity
 
-- ett helt repository eller källkodsträd har analyserats,
-- persistent workspace-state har lästs eller uppdaterats,
-- `project-status.yaml` har muterats,
-- `Gör nästa steg` återupptagit från verklig persistent checkpoint,
-- deterministiska scripts har körts,
-- validering/evals har passerat,
-- de tre slutartefakterna har skapats som faktiska filer,
-- komplett project package har byggts,
-- en kontroll som inte körts är PASS.
+`equivalent_runtime_dependent` betyder att canonical beteende, artifacts och state-semantik kan bevaras när hosten erbjuder de required capabilities som uppgiften behöver.
 
-## Aktiveringskriterier
+Det gäller särskilt:
 
-OpenAI Plugin får flyttas till aktiv runtime först genom en separat förändring där konkreta plugin tools/MCP-integreringar mappas mot Design Reviewers canonical capabilities och regressionstestas.
+- källkodsträd och dokumentation analyseras från faktisk input,
+- persistent workspace/state används,
+- `project-status.yaml` förblir auktoritativ,
+- `Gör nästa steg` återupptar från explicit state,
+- de tre slutartefakterna skapas som faktiska filer,
+- evidence gate och DR/RS/VA/UX/IP-semantik bevaras.
 
-Minimikrav för aktivering:
+## No-false-PASS
 
-- verifierad source-tree/file access,
-- persistent workspace/state,
-- filesystem write,
-- artifact generation som faktiska filer,
-- reliable validation,
-- project package generation,
-- no-false-PASS,
-- regression mot canonical capability-, artifact-, workspace/state- och tool-kontrakt.
+Unrun verification får aldrig redovisas som PASS.
 
-Fram till dess finns ingen OpenAI Plugin-distribution, inget build target och ingen release asset.
+Om en host-capability som behövs för en viss operation saknas ska begränsningen redovisas explicit. Design Reviewer får inte påstå att ett helt repository analyserats, att persistent state muterats eller att ett script körts om det inte faktiskt skett.
+
+## Release
+
+OpenAI Plugin ingår i build och release som:
+
+`design-reviewer-plugin-<version>.zip`
+
+Distributionen innehåller skill, references, assets, runtime contract och den deklarerade runtime script-resursen.
