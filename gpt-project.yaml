@@ -392,6 +392,10 @@ runtime:
       suitability: full
       activate_by_default: true
       implementation_status: implemented
+    openai_plugin:
+      suitability: full
+      activate_by_default: true
+      implementation_status: implemented
   chat_zip:
     enabled: true
     role: peer_distribution
@@ -494,6 +498,30 @@ runtime:
         - contracts/implementation-planning-contract.yaml
     templates:
       readme: templates/README.opencode.md.tpl
+  plugin:
+    enabled: true
+    role: peer_distribution
+    compatibility: equivalent_runtime_dependent
+    layout:
+      manifest_file: plugin.json
+      skills: skills
+      runtime_contract: runtime-contract.json
+    skill:
+      id: design-review-workflow
+      name: design-review-workflow
+      description: Genomför evidensbaserad Design Reviewer-analys stegvis och producerar de tre canonical Markdown-artefakterna.
+      references:
+      - contracts/analysis-workflow-contract.yaml
+      - contracts/design-observation-contract.yaml
+      - contracts/design-review-report-contract.yaml
+      - contracts/solution-prioritization-contract.yaml
+      - contracts/implementation-planning-contract.yaml
+      assets:
+      - templates/design-review.md
+      - templates/recommended-solution-strategy.md
+      - templates/implementation-plan.md
+      scripts:
+      - scripts/analyze_source_tree.py
 build_system:
   targets:
   - project
@@ -501,6 +529,7 @@ build_system:
   - custom-gpt
   - claude
   - opencode
+  - plugin
   runtime_targets:
     chat:
       runtime_id: chatgpt_chat
@@ -526,6 +555,12 @@ build_system:
       builder: opencode
       filename_pattern: <project-id>-opencode-<version>.zip
       artifact_type: opencode_zip
+    plugin:
+      runtime_id: openai_plugin
+      runtime_key: plugin
+      builder: plugin
+      filename_pattern: <project-id>-plugin-<version>.zip
+      artifact_type: plugin_zip
 workflow:
   create_project_package_on_first_execution_step: true
   resume_from_project_package: true
