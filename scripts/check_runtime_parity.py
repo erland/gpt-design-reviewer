@@ -49,7 +49,7 @@ def main():
     if failures:
         print('RUNTIME PARITY: FAIL'); [print(' -',x) for x in failures]; return 1
     print('RUNTIME PARITY: PASS')
-    print('Canonical sections identical across chat, custom-gpt, claude and opencode: capabilities, artifacts, workspace_state')
+    print('Canonical sections identical across all active runtimes: capabilities, artifacts, workspace_state')
     return 0
 
 if __name__=='__main__': sys.exit(main())
