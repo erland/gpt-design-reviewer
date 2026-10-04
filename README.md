@@ -53,6 +53,7 @@ Följande runtimes är implementerade från samma canonical produktmodell:
 - ChatGPT Custom GPT
 - Claude Projects
 - OpenCode
+- OpenAI Plugin
 
 Canonical capabilities, slutartefakter och workspace/resume-state ska vara identiska mellan runtimes. Endast verkliga adapterskillnader får variera. Se `docs/runtime-parity.md`.
 
@@ -60,9 +61,9 @@ Canonical capabilities, slutartefakter och workspace/resume-state ska vara ident
 
 Design Reviewer är migrerad till GPT Byggaren 1.5.0 med bibehållet produktbeteende och fortsatt 20/20 complete produktstatus.
 
-Aktiva runtime-distributioner är ChatGPT Chat, ChatGPT Custom GPT, Claude Projects och OpenCode. Verklig compatibility redovisas som Chat `equivalent_runtime_dependent`, Custom GPT `equivalent_with_platform_constraints`, Claude Projects `reduced` och OpenCode `equivalent`.
+Aktiva runtime-distributioner är ChatGPT Chat, ChatGPT Custom GPT, Claude Projects, OpenCode och OpenAI Plugin. Verklig compatibility redovisas som Chat `equivalent_runtime_dependent`, Custom GPT `equivalent_with_platform_constraints`, Claude Projects `reduced`, OpenCode `equivalent` och OpenAI Plugin `equivalent_runtime_dependent`.
 
-OpenAI Plugin är explicit `not_active / reduced / advisory_only` och ingår inte i build eller release. Build, runtime-verifiering, parity och GitHub Release härleds från `runtime-distribution-registry.yaml`, och exakt release-asset-set valideras före publicering.
+OpenAI Plugin är skills-first och använder hostens filesystem/persistent-state capabilities. `scripts/analyze_source_tree.py` paketeras som rekommenderad script-resurs; saknas code execution fortsätter den semantiska analysen med ärlig degrade. Build, runtime-verifiering, parity och GitHub Release härleds från `runtime-distribution-registry.yaml`, och exakt release-asset-set valideras före publicering.
 
 Se `docs/gpt-builder-1.5-runtime-migration.md`, `docs/openai-plugin-1.5-assessment.md` och `migration-status-1.5.yaml`.
 
