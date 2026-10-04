@@ -11,6 +11,7 @@ Design Reviewer har genomfört samtliga 20 planerade utvecklingssteg.
 - ChatGPT Custom GPT-adapter
 - Claude Projects-adapter
 - OpenCode-adapter
+- OpenAI Plugin-adapter
 - Runtime parity
 - Project hygiene och slutrevision
 - Release readiness
@@ -26,7 +27,7 @@ Runtime-status:
 - ChatGPT Custom GPT: `equivalent_with_platform_constraints`
 - Claude Projects: `reduced`
 - OpenCode: `equivalent`
-- OpenAI Plugin: `not_active / reduced / advisory_only`
+- OpenAI Plugin: `equivalent_runtime_dependent`
 
 `runtime-distribution-registry.yaml` styr aktivt runtime-set, artifactnamn, parity och release-assets. Exact-asset-gaten kräver exakt det registry-definierade ZIP-setet före publicering.
 
