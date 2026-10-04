@@ -15,12 +15,9 @@ active_targets:
   - custom-gpt
   - claude
   - opencode
+  - plugin
 
-inactive_targets:
-  openai_plugin:
-    status: not_active
-    compatibility: reduced
-    advisory_only: true
+inactive_targets: {}
 
 project_artifact:
   id: project
@@ -59,6 +56,14 @@ targets:
     artifact_pattern: design-reviewer-opencode-{version}.zip
     compatibility: equivalent
     contract_member: .opencode/design-reviewer-runtime.json
+  plugin:
+    status: active
+    runtime_id: openai_plugin
+    runtime_key: plugin
+    builder: plugin
+    artifact_pattern: design-reviewer-plugin-{version}.zip
+    compatibility: equivalent_runtime_dependent
+    contract_member: runtime-contract.json
 
 derived_artifacts:
   checksums: SHA256SUMS.txt

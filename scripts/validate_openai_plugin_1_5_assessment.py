@@ -11,43 +11,44 @@ def main():
     project=yaml.safe_load((ROOT/"gpt-project.yaml").read_text(encoding="utf-8"))
     doc=(ROOT/"docs/openai-plugin-1.5-assessment.md").read_text(encoding="utf-8").casefold()
 
-    plugin=registry.get("inactive_targets",{}).get("openai_plugin",{})
-    if plugin.get("status")!="not_active":
-        errors.append("registry plugin status must be not_active")
-    if plugin.get("compatibility")!="reduced":
-        errors.append("registry plugin compatibility must be reduced")
-    if plugin.get("advisory_only") is not True:
-        errors.append("registry plugin must remain advisory_only")
+    plugin=registry.get("targets",{}).get("plugin",{})
+    if plugin.get("status")!="active":
+        errors.append("registry plugin status must be active")
+    if plugin.get("compatibility")!="equivalent_runtime_dependent":
+        errors.append("registry plugin compatibility must be equivalent_runtime_dependent")
+    if plugin.get("runtime_id")!="openai_plugin":
+        errors.append("registry plugin runtime_id must be openai_plugin")
 
     nplugin=normalized.get("runtime_policy",{}).get("openai_plugin",{})
-    if nplugin.get("status")!="not_active":
-        errors.append("normalized plugin status must be not_active")
-    if nplugin.get("target")!="reduced":
-        errors.append("normalized plugin target must be reduced")
-    if nplugin.get("advisory_only") is not True:
-        errors.append("normalized plugin must remain advisory_only")
+    if nplugin.get("status")!="active":
+        errors.append("normalized plugin status must be active")
+    if nplugin.get("target")!="equivalent_runtime_dependent":
+        errors.append("normalized plugin target must be equivalent_runtime_dependent")
+    if nplugin.get("advisory_only") is not False:
+        errors.append("normalized plugin must not be advisory_only")
 
-    if "openai_plugin" in registry.get("active_targets",[]):
-        errors.append("OpenAI Plugin must not be active")
-    if "openai_plugin" in registry.get("targets",{}):
-        errors.append("OpenAI Plugin must not have an active distribution target")
-    if "openai_plugin" in project.get("build_system",{}).get("targets",[]):
-        errors.append("OpenAI Plugin must not be in build_system.targets")
+    if "plugin" not in registry.get("active_targets",[]):
+        errors.append("OpenAI Plugin must be active")
+    if "plugin" not in project.get("build_system",{}).get("targets",[]):
+        errors.append("OpenAI Plugin must be in build_system.targets")
+    if not project.get("runtime",{}).get("plugin",{}).get("enabled"):
+        errors.append("OpenAI Plugin runtime must be enabled")
 
     required_markers=[
-        "not_active",
-        "reduced",
-        "advisory_only",
-        "källkodsträd",
+        "active",
+        "equivalent_runtime_dependent",
+        "filesystem",
         "persistent workspace/state",
         "project-status.yaml",
         "gör nästa steg",
         "design-review.md",
         "recommended-solution-strategy.md",
         "implementation-plan.md",
+        "code execution",
+        "recommended",
+        "degrade",
         "unrun verification",
         "får aldrig redovisas som pass",
-        "ingen openai plugin-distribution",
     ]
     for marker in required_markers:
         if marker.casefold() not in doc:
@@ -57,8 +58,7 @@ def main():
         print("FAILED: OpenAI Plugin GPT Builder 1.5 compatibility assessment")
         for e in errors: print("-",e)
         return 1
-    print("OK: OpenAI Plugin remains not_active/reduced/advisory_only")
-    print("No active distribution, release asset or full peer-runtime parity is claimed")
+    print("OK: OpenAI Plugin active with equivalent_runtime_dependent compatibility")
     return 0
 
 if __name__=="__main__":

@@ -759,11 +759,136 @@ def build_opencode(root: Path, cfg: dict, build_root: Path, version: str) -> Pat
     return out
 
 
+def plugin_runtime_contract(cfg: dict) -> dict:
+    tool_contract = normalize_tool_contract(cfg)
+    script_refs = [
+        tool.get("script")
+        for tool in tool_contract.get("tools", [])
+        if tool.get("type") == "script" and tool.get("script")
+    ]
+    return {
+        "schema_version": 1,
+        "runtime_id": "openai_plugin",
+        "capabilities": normalize_capability_contract(cfg),
+        "artifacts": normalize_artifact_contract(cfg),
+        "workspace_state": normalize_workspace_state_contract(cfg),
+        "tools": tool_contract,
+        "adapter": {
+            "mode": "skills_first",
+            "compatibility": "equivalent_runtime_dependent",
+            "runtime_requirements": {
+                "filesystem": {"read": "required", "write": "required"},
+                "persistent_state": {"level": "required", "authority": "project-status.yaml"},
+                "archive_extract": {"level": "required", "fallback": "manual"},
+                "structured_data": {"level": "recommended"},
+                "code_execution": {"level": "recommended", "fallback": "degrade"},
+            },
+            "script_resources": {
+                "packaged": script_refs,
+                "execution": "host_code_execution_when_available",
+                "mcp_required_for_resource_use": False,
+            },
+        },
+    }
+
+
+def build_plugin(root: Path, cfg: dict, build_root: Path, version: str) -> Path:
+    out = build_root / "plugin"
+    ensure_clean_dir(out)
+    runtime_cfg = cfg["runtime"]["plugin"]
+    skill_cfg = runtime_cfg["skill"]
+    skill_dir = out / runtime_cfg["layout"]["skills"] / skill_cfg["id"]
+
+    plugin_manifest = {
+        "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+        "name": cfg["project"]["id"],
+        "version": version,
+        "description": cfg["project"]["description"].strip(),
+    }
+    (out / runtime_cfg["layout"]["manifest_file"]).write_text(
+        json.dumps(plugin_manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    canonical = (root / cfg["instructions"]["canonical"]).read_text(encoding="utf-8").strip()
+    workflow = cfg["runtime"]["opencode"]["skills"]["definitions"][0].get("workflow", [])
+    body = [
+        "---",
+        f"name: {skill_cfg['name']}",
+        f"description: {skill_cfg['description']}",
+        "metadata:",
+        "  source: generated-from-canonical-project",
+        "---",
+        "",
+        "## Runtime requirements",
+        "",
+        "- Filesystem read/write and persistent workspace state are required.",
+        "- ZIP/archive extraction is required for ZIP-based source input.",
+        "- Code execution is recommended, not required for the semantic review core.",
+        "- When compatible code execution is available, use packaged scripts for deterministic evidence support.",
+        "- If code execution is unavailable, continue semantic analysis and mark script-derived evidence as unavailable rather than simulating it.",
+        "",
+        "## Canonical behavior",
+        "",
+        canonical,
+        "",
+        "## Workflow",
+        "",
+    ]
+    body.extend(f"{i}. {line}" for i, line in enumerate(workflow, 1))
+
+    body.extend(["", "## References", ""])
+    for ref in skill_cfg.get("references", []):
+        src = root / ref
+        copy_file(src, skill_dir / "references" / src.name)
+        body.append(f"- Read `references/{src.name}` when relevant.")
+
+    body.extend(["", "## Assets", ""])
+    for ref in skill_cfg.get("assets", []):
+        src = root / ref
+        copy_file(src, skill_dir / "assets" / src.name)
+        body.append(f"- Use `assets/{src.name}` for the corresponding final artifact.")
+
+    body.extend(["", "## Scripts", ""])
+    for ref in skill_cfg.get("scripts", []):
+        src = root / ref
+        copy_file(src, skill_dir / "scripts" / src.name)
+        body.append(f"- Use `scripts/{src.name}` as deterministic evidence support when host code execution is available.")
+
+    shared_lib = root / "scripts" / "lib"
+    if skill_cfg.get("scripts") and shared_lib.exists():
+        copy_tree_filtered(shared_lib, skill_dir / "scripts" / "lib")
+
+    (skill_dir / "SKILL.md").write_text("\n".join(body).rstrip() + "\n", encoding="utf-8")
+
+    contract_ref = runtime_cfg["layout"]["runtime_contract"]
+    (out / contract_ref).write_text(
+        json.dumps(plugin_runtime_contract(cfg), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (out / "README.md").write_text(
+        "# Design Reviewer – OpenAI Plugin\n\n"
+        "Skills-first runtime with equivalent-runtime-dependent parity. The host must provide "
+        "filesystem read/write and persistent workspace state. Code execution is optional evidence support.\n",
+        encoding="utf-8",
+    )
+    (out / "VERSION").write_text(version + "\n", encoding="utf-8")
+    write_manifest(out, cfg["project"]["id"] + "-plugin", version, f"skills/{skill_cfg['id']}/SKILL.md")
+    manifest_path = out / "MANIFEST.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["adapter_id"] = "openai_plugin"
+    manifest["contract_snapshot"] = contract_ref
+    manifest["skills"] = [skill_cfg["id"]]
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return out
+
+
 RUNTIME_BUILDERS = {
     "chat": build_chat,
     "custom_gpt": build_custom,
     "claude": build_claude,
     "opencode": build_opencode,
+    "plugin": build_plugin,
 }
 
 

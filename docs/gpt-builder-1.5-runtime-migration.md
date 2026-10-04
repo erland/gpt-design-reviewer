@@ -2,7 +2,7 @@
 
 Projekt: **Design Reviewer**
 
-Utgångsläge: utvecklingsplan **20/20 complete**, fyra implementerade peer runtimes, canonical kontrakt i `gpt-project.yaml` och releaseautomation via GitHub Actions.
+Utgångsläge: utvecklingsplan **20/20 complete**, fem implementerade peer runtimes, canonical kontrakt i `gpt-project.yaml` och releaseautomation via GitHub Actions.
 
 ## Mål
 
@@ -23,7 +23,7 @@ Följande ska bevaras:
   - `design-review.md`
   - `recommended-solution-strategy.md`
   - `implementation-plan.md`
-- Fyra runtime-distributioner: Chat, Custom GPT, Claude Projects och OpenCode.
+- Fem runtime-distributioner: Chat, Custom GPT, Claude Projects, OpenCode och OpenAI Plugin.
 - Befintlig 20/20-projektstatus och releasehistorik.
 
 ## Runtime-målbild
@@ -34,6 +34,7 @@ Aktiva runtimes:
 2. ChatGPT Custom GPT
 3. Claude Projects
 4. OpenCode
+5. OpenAI Plugin
 
 GPT Byggaren 1.5.0 ska beskriva verklig parity mer exakt:
 
@@ -41,8 +42,9 @@ GPT Byggaren 1.5.0 ska beskriva verklig parity mer exakt:
 - Custom GPT: equivalent_with_platform_constraints
 - Claude Projects: reduced
 - OpenCode: equivalent
+- OpenAI Plugin: equivalent_runtime_dependent
 
-OpenAI Plugin ska bedömas explicit men inte automatiskt aktiveras som full peer runtime. Om nödvändig filåtkomst, persistent state, artifact writing, validation och project packaging inte kan verifieras ska målet vara `not_active / reduced / advisory_only`.
+OpenAI Plugin är aktiv skills-first runtime. Required host-capabilities är filesystem read/write, archive extraction och persistent workspace/state. Code execution är rekommenderad evidensförstärkning och får degraderas utan att blockera den semantiska kärnanalysen.
 
 ## Steg
 
@@ -65,7 +67,7 @@ Verifiera compiled instruction, Knowledge, plattformsbegränsningar och no-false
 Lås Claude som reduced och OpenCode som equivalent med korrekt tool/state-semantik.
 
 ### 7. OpenAI Plugin compatibility assessment
-Dokumentera och regressionstesta not_active/reduced/advisory_only om full parity inte kan bevisas.
+Aktivera skills-first Plugin med explicit host-capability-kontrakt, paketera det deklarerade analysscriptet med dess runtimeberoenden och regressionstesta equivalent_runtime_dependent parity.
 
 ### 8. Generalisera CI/parity/release
 Härled aktiva runtimes, validering och release-assets från registryt och verifiera exakt artifact-set.
@@ -84,7 +86,7 @@ Slutlig runtime-status:
 - ChatGPT Custom GPT — `equivalent_with_platform_constraints`
 - Claude Projects — `reduced`
 - OpenCode — `equivalent`
-- OpenAI Plugin — `not_active / reduced / advisory_only`
+- OpenAI Plugin — `equivalent_runtime_dependent`
 
 Canonical Design Reviewer-beteende, 20/20-produktstatus, DR/RS/VA/UX/IP-semantik, focused/progressive workflow, evidence gate, explicit workspace/checkpoint-state, `Gör nästa steg` och de tre slutartefakterna är bevarade.
 

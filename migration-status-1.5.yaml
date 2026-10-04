@@ -51,15 +51,17 @@ runtime_baseline:
     - custom-gpt
     - claude
     - opencode
+    - plugin
   intended_compatibility:
     chat: equivalent_runtime_dependent
     custom-gpt: equivalent_with_platform_constraints
     claude: reduced
     opencode: equivalent
+    plugin: equivalent_runtime_dependent
   openai_plugin:
-    status: not_active
-    intended_target: reduced
-    advisory_only: true
+    status: active
+    intended_target: equivalent_runtime_dependent
+    advisory_only: false
 
 canonical_artifacts:
   - design-review.md
@@ -95,13 +97,14 @@ registry:
     - custom-gpt
     - claude
     - opencode
+    - plugin
   build_defaults_use_registry: true
   runtime_parity_uses_registry: true
   ci_uses_registry_default_targets: true
   openai_plugin:
-    status: not_active
-    compatibility: reduced
-    advisory_only: true
+    status: active
+    compatibility: equivalent_runtime_dependent
+    advisory_only: false
   ci_passed: true
 
 chat_verification:
@@ -165,21 +168,23 @@ opencode_verification:
 openai_plugin_assessment:
   document: docs/openai-plugin-1.5-assessment.md
   validation: scripts/validate_openai_plugin_1_5_assessment.py
-  status: not_active
-  compatibility: reduced
-  advisory_only: true
-  active_distribution: false
-  build_target: false
-  release_asset: false
-  full_peer_parity: false
-  requires_for_activation:
+  status: active
+  compatibility: equivalent_runtime_dependent
+  advisory_only: false
+  active_distribution: true
+  build_target: true
+  release_asset: true
+  full_peer_parity: runtime_dependent
+  required_host_capabilities:
     - source_tree_file_access
     - persistent_workspace_state
     - filesystem_write
-    - reliable_validation
+    - archive_extract
     - canonical_artifact_generation
-    - project_package_generation
-    - no_false_pass
+  recommended_host_capabilities:
+    - code_execution
+  script_fallback: degrade
+  no_false_pass: true
   ci_passed: true
 
 release_readiness:
@@ -204,6 +209,6 @@ final_readiness:
 next_step:
   recommended: merge
   title: Merge migrations-PR
-  reason: "GPT Byggaren 1.5.0-migreringen är komplett 9/9. Fyra aktiva runtimes är verifierade, OpenAI Plugin är advisory only och build/release är registry-drivna."
+  reason: "GPT Byggaren 1.5.0-migreringen är komplett 9/9. Fem aktiva runtimes är verifierade, inklusive OpenAI Plugin som equivalent_runtime_dependent, och build/release är registry-drivna."
 
 human_readable_status: "GPT Byggaren 1.5.0-migreringen är klar 9/9. PR kan mergas när slutlig CI är grön."

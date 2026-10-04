@@ -40,11 +40,13 @@ def main():
         if target.get("artifact_pattern")!=expected:
             errors.append(f"{rid}: artifact pattern mismatch")
 
-    plugin=registry["inactive_targets"]["openai_plugin"]
-    if plugin.get("compatibility")!="reduced" or plugin.get("advisory_only") is not True:
-        errors.append("OpenAI Plugin baseline must remain reduced/advisory_only")
-    if "openai_plugin" in active:
-        errors.append("OpenAI Plugin must not be active")
+    plugin=registry["targets"].get("plugin",{})
+    if plugin.get("status")!="active":
+        errors.append("OpenAI Plugin registry target must be active")
+    if plugin.get("compatibility")!="equivalent_runtime_dependent":
+        errors.append("OpenAI Plugin compatibility must be equivalent_runtime_dependent")
+    if plugin.get("runtime_id")!="openai_plugin":
+        errors.append("OpenAI Plugin runtime_id mismatch")
 
     release=registry["release"]
     if release.get("runtime_assets_from")!="active_targets":

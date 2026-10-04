@@ -1,11 +1,11 @@
 # Runtime parity – Design Reviewer
 
 Status: PASS  
-Scope: ChatGPT Chat, ChatGPT Custom GPT, Claude Projects och OpenCode.
+Scope: ChatGPT Chat, ChatGPT Custom GPT, Claude Projects, OpenCode och OpenAI Plugin.
 
 ## Canonical parity
 
-Alla fyra runtimes använder samma canonical kontrakt för:
+Alla fem runtimes använder samma canonical kontrakt för:
 
 - capabilities,
 - de tre slutartefakterna,
@@ -34,14 +34,14 @@ Skillnaden mellan runtimes ligger i hur state faktiskt lagras eller representera
 
 ## Verkliga adapter-skillnader
 
-| Område | ChatGPT Chat | Custom GPT | Claude Projects | OpenCode |
-| --- | --- | --- | --- | --- |
-| Canonical reviewbeteende | Fullt | Fullt via kompilerad kärninstruktion | Fullt | Fullt |
-| Direkt arbete mot bifogade filer | Runtime-stöd | Runtime-/Builder-beroende | Projektkontext | Direkt workspace |
-| Inbäddat deterministiskt analysscript | Ja | Reducerat/ej inbäddat som körbart script | Nej | Ja, som custom tool |
-| Fallback utan script | Filläsning/sökning | Filläsning/sökning | Filläsning/sökning | Filläsning/sökning |
-| Full canonical instruktion distribuerad | Ja | Nej, komprimerad till plattformsgräns | Ja | Ja |
-| Stöd-Knowledge | Ja | Ja | Ja | Ja |
+| Område | ChatGPT Chat | Custom GPT | Claude Projects | OpenCode | OpenAI Plugin |
+| --- | --- | --- | --- | --- | --- |
+| Canonical reviewbeteende | Fullt | Fullt via kompilerad kärninstruktion | Fullt | Fullt | Fullt när required host-capabilities finns |
+| Direkt arbete mot bifogade filer | Runtime-stöd | Runtime-/Builder-beroende | Projektkontext | Direkt workspace | Host filesystem |
+| Inbäddat deterministiskt analysscript | Ja | Reducerat/ej inbäddat som körbart script | Nej | Ja, som custom tool | Ja, som script-resurs |
+| Fallback utan script | Filläsning/sökning | Filläsning/sökning | Filläsning/sökning | Filläsning/sökning | Filläsning/sökning |
+| Full canonical instruktion distribuerad | Ja | Nej, komprimerad till plattformsgräns | Ja | Ja | Ja, i skill |
+| Stöd-Knowledge/references | Ja | Ja | Ja | Ja | Ja, som references/assets |
 
 ## Custom GPT
 
@@ -54,6 +54,10 @@ Claude Projects-paketet bäddar inte in lokalt command execution för `analyze_s
 ## OpenCode
 
 OpenCode är workspace-first och kan exponera source-tree-inventeringen som ett custom tool. Det ger starkare lokal verktygsintegration men ändrar inte slutsatsreglerna: verktygsresultat är evidens/hotspot-signaler, aldrig automatiska designproblem.
+
+## OpenAI Plugin
+
+OpenAI Plugin är skills-first och har `equivalent_runtime_dependent` parity. Filesystem read/write, archive extraction och persistent workspace/state måste tillhandahållas av hosten. `analyze_source_tree.py` och dess `scripts/lib/`-beroenden följer med som script-resurser. Code execution är rekommenderad evidensförstärkning; om den saknas används den canonical fallbacken med semantisk filläsning/sökning och scriptresultat simuleras aldrig.
 
 ## ChatGPT Chat
 
