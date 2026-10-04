@@ -153,6 +153,82 @@ def validate_opencode(root: Path, cfg: dict) -> list[str]:
     return errors
 
 
+def validate_plugin(root: Path, cfg: dict) -> list[str]:
+    errors = []
+    build = root / "build" / "plugin"
+    if not build.exists():
+        return ["Plugin build directory missing"]
+
+    runtime_cfg = cfg["runtime"]["plugin"]
+    skill_cfg = runtime_cfg["skill"]
+    skill_dir = build / runtime_cfg["layout"]["skills"] / skill_cfg["id"]
+    required = [
+        build / runtime_cfg["layout"]["manifest_file"],
+        build / runtime_cfg["layout"]["runtime_contract"],
+        build / "README.md",
+        build / "VERSION",
+        build / "MANIFEST.json",
+        skill_dir / "SKILL.md",
+    ]
+    for p in required:
+        if not p.exists():
+            errors.append(f"Missing required file: {p.relative_to(build)}")
+
+    for ref in skill_cfg.get("references", []):
+        expected = skill_dir / "references" / Path(ref).name
+        if not expected.is_file():
+            errors.append(f"Missing plugin reference: {expected.relative_to(build)}")
+    for ref in skill_cfg.get("assets", []):
+        expected = skill_dir / "assets" / Path(ref).name
+        if not expected.is_file():
+            errors.append(f"Missing plugin asset: {expected.relative_to(build)}")
+    for ref in skill_cfg.get("scripts", []):
+        expected = skill_dir / "scripts" / Path(ref).name
+        if not expected.is_file():
+            errors.append(f"Missing plugin script: {expected.relative_to(build)}")
+
+    shared_lib = root / "scripts" / "lib"
+    if skill_cfg.get("scripts") and shared_lib.exists():
+        for source in shared_lib.rglob("*"):
+            if source.is_file() and source.suffix not in {".pyc", ".pyo"}:
+                expected = skill_dir / "scripts" / "lib" / source.relative_to(shared_lib)
+                if not expected.is_file():
+                    errors.append(f"Missing plugin shared script dependency: {expected.relative_to(build)}")
+
+    contract_path = build / runtime_cfg["layout"]["runtime_contract"]
+    if contract_path.is_file():
+        try:
+            contract = json.loads(contract_path.read_text(encoding="utf-8"))
+            if contract.get("runtime_id") != "openai_plugin":
+                errors.append("Plugin runtime_id mismatch")
+            adapter = contract.get("adapter", {})
+            if adapter.get("compatibility") != "equivalent_runtime_dependent":
+                errors.append("Plugin compatibility mismatch")
+            req = adapter.get("runtime_requirements", {})
+            if req.get("filesystem", {}).get("write") != "required":
+                errors.append("Plugin filesystem write requirement missing")
+            if req.get("persistent_state", {}).get("level") != "required":
+                errors.append("Plugin persistent state requirement missing")
+            if req.get("code_execution", {}).get("level") != "recommended":
+                errors.append("Plugin code execution must remain recommended")
+        except Exception as exc:
+            errors.append(f"Invalid plugin runtime contract: {exc}")
+
+    skill_file = skill_dir / "SKILL.md"
+    if skill_file.is_file():
+        text = skill_file.read_text(encoding="utf-8")
+        for required_marker in (
+            "name: design-review-workflow",
+            "## Runtime requirements",
+            "Code execution is recommended",
+            "continue semantic analysis",
+            "## Canonical behavior",
+        ):
+            if required_marker not in text:
+                errors.append(f"Plugin SKILL.md missing marker: {required_marker}")
+    return errors
+
+
 def validate_chat(root: Path, cfg: dict) -> list[str]:
     errors = []
     build = root / "build" / "chat"
@@ -194,6 +270,8 @@ def main() -> int:
         errors.extend(validate_claude(root, cfg))
     if cfg.get("runtime", {}).get("opencode", {}).get("enabled"):
         errors.extend(validate_opencode(root, cfg))
+    if cfg.get("runtime", {}).get("plugin", {}).get("enabled"):
+        errors.extend(validate_plugin(root, cfg))
 
     if errors:
         print("VALIDATION: FAIL")
