@@ -721,10 +721,6 @@ skills:
   - id: source-analysis
     name: source-analysis
     description: Inventerar källkod, dokumentation och beroenden samt samlar reproducerbar evidens utan att dra förhastade designslutsatser.
-    workflow:
-    - Identifiera teknikstack, moduler, flöden och integrationer.
-    - Kör valfritt analysverktyg och kontrollera resultatet mot källkod.
-    - Dokumentera hotspots, osäkerheter och filreferenser i projektstatus.
     references:
     - contracts/analysis-workflow-contract.yaml
     - contracts/design-observation-contract.yaml
@@ -733,10 +729,6 @@ skills:
   - id: design-review
     name: design-review
     description: Utför evidensbaserad designgranskning och dokumenterar observationer med stabila DR-ID:n, styrkor och osäkerheter.
-    workflow:
-    - Granska kod och arkitektur i sitt sammanhang, inte bara statiska hotspots.
-    - Sätt evidensnivå, confidence, severity och preserve constraints separat.
-    - Skapa design-review.md enligt rapportkontraktet; bevara DR-ID:n.
     references:
     - contracts/design-observation-contract.yaml
     - contracts/design-review-report-contract.yaml
@@ -745,10 +737,6 @@ skills:
   - id: solution-strategy
     name: solution-strategy
     description: Prioriterar evidensbaserade åtgärdsteman som RS-ID:n med beroenden, risker och alternativa lösningar.
-    workflow:
-    - Läs och verifiera DR-observationernas källhänvisningar.
-    - Tillämpa evidence gates, preserve constraints och kvalitativ prioritering.
-    - Skapa recommended-solution-strategy.md med spårning RS till DR.
     references:
     - contracts/solution-prioritization-contract.yaml
     - contracts/design-observation-contract.yaml
@@ -757,10 +745,6 @@ skills:
   - id: implementation-planning
     name: implementation-planning
     description: Omvandlar prioriterad lösningsstrategi till små verifierbara implementationssteg IP-001 och framåt.
-    workflow:
-    - Använd en godkänd lösningsstrategi och dess RS till DR-referenser.
-    - Skapa ett prompt-stort steg i taget med beroenden, tester och klart-kriterier.
-    - Leverera implementation-plan.md med spårning IP till RS och DR.
     references:
     - contracts/implementation-planning-contract.yaml
     - contracts/solution-prioritization-contract.yaml
