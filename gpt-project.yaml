@@ -730,6 +730,7 @@ skills:
     - contracts/design-observation-contract.yaml
     scripts:
     - scripts/analyze_source_tree.py
+    assets: []
   - id: design-review
     source: assistant/skills/design-review.md
     name: design-review
