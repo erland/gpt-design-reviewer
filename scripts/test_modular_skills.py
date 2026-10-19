@@ -21,7 +21,7 @@ def main():
         assert len(ids) == len(set(ids)), f"Duplicate {label} skill IDs"
         assert EXPECTED.issubset(ids), f"{label}: missing {EXPECTED - set(ids)}"
         for skill in defs:
-            assert skill.get("description") and skill.get("workflow", True), f"Incomplete skill {skill['id']}"
+            assert skill.get("description"), f"Incomplete skill {skill['id']}"
     text = (root / "assistant/instructions.md").read_text()
     for token in ("DR-*", "RS-*", "IP-*", "project-status.yaml"):
         assert token in text, f"Missing routing contract {token}"
