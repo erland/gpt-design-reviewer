@@ -7,6 +7,8 @@ project:
   profile: zip_first_advanced
 instructions:
   canonical: assistant/instructions.md
+  mode: modular_skills
+  core: assistant/core.md
   core_contract:
     enabled: true
     required_markers:
@@ -719,6 +721,7 @@ deterministic_analysis_tools:
 skills:
   definitions:
   - id: source-analysis
+    source: assistant/skills/source-analysis.md
     name: source-analysis
     description: Inventerar källkod, dokumentation och beroenden samt samlar reproducerbar evidens utan att dra förhastade designslutsatser.
     references:
@@ -727,6 +730,7 @@ skills:
     scripts:
     - scripts/analyze_source_tree.py
   - id: design-review
+    source: assistant/skills/design-review.md
     name: design-review
     description: Utför evidensbaserad designgranskning och dokumenterar observationer med stabila DR-ID:n, styrkor och osäkerheter.
     references:
@@ -735,6 +739,7 @@ skills:
     assets:
     - templates/design-review.md
   - id: solution-strategy
+    source: assistant/skills/solution-strategy.md
     name: solution-strategy
     description: Prioriterar evidensbaserade åtgärdsteman som RS-ID:n med beroenden, risker och alternativa lösningar.
     references:
@@ -743,6 +748,7 @@ skills:
     assets:
     - templates/recommended-solution-strategy.md
   - id: implementation-planning
+    source: assistant/skills/implementation-planning.md
     name: implementation-planning
     description: Omvandlar prioriterad lösningsstrategi till små verifierbara implementationssteg IP-001 och framåt.
     references:
@@ -751,6 +757,7 @@ skills:
     assets:
     - templates/implementation-plan.md
   - id: design-review-workflow
+    source: assistant/skills/design-review-workflow.md
     name: design-review-workflow
     description: Genomför evidensbaserad Design Reviewer-analys stegvis och producerar
       de tre canonical Markdown-artefakterna.

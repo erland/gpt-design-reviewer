@@ -36,6 +36,8 @@ jobs:
         run: python scripts/test_packaged_skill_scripts.py --project-root .
       - name: Verify modular skills in release distributions
         run: python scripts/test_modular_skills.py --project-root . --version "${{ steps.version.outputs.version }}"
+      - name: Verify modular Skill separation
+        run: python scripts/test_skill_separation.py --project-root . --version "${{ steps.version.outputs.version }}"
       - name: Validate packages and release assets
         run: |
           python scripts/validate_distributions.py --project-root .
