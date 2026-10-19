@@ -87,6 +87,13 @@
         },
         "additionalProperties": false
       }
+    },
+    "resource_policy": {
+      "type": "string",
+      "enum": [
+        "explicit",
+        "legacy"
+      ]
     }
   },
   "additionalProperties": false
