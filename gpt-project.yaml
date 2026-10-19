@@ -719,6 +719,7 @@ deterministic_analysis_tools:
   evidence_only: true
   core_review_blocks_if_unavailable: false
 skills:
+  resource_policy: explicit
   definitions:
   - id: source-analysis
     source: assistant/skills/source-analysis.md
@@ -729,6 +730,7 @@ skills:
     - contracts/design-observation-contract.yaml
     scripts:
     - scripts/analyze_source_tree.py
+    assets: []
   - id: design-review
     source: assistant/skills/design-review.md
     name: design-review
@@ -738,6 +740,7 @@ skills:
     - contracts/design-review-report-contract.yaml
     assets:
     - templates/design-review.md
+    scripts: []
   - id: solution-strategy
     source: assistant/skills/solution-strategy.md
     name: solution-strategy
@@ -747,6 +750,7 @@ skills:
     - contracts/design-observation-contract.yaml
     assets:
     - templates/recommended-solution-strategy.md
+    scripts: []
   - id: implementation-planning
     source: assistant/skills/implementation-planning.md
     name: implementation-planning
@@ -756,6 +760,7 @@ skills:
     - contracts/solution-prioritization-contract.yaml
     assets:
     - templates/implementation-plan.md
+    scripts: []
   - id: design-review-workflow
     source: assistant/skills/design-review-workflow.md
     name: design-review-workflow

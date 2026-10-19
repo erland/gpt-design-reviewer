@@ -33,6 +33,8 @@ jobs:
         run: python scripts/test_modular_skills.py --project-root . --version 0.0.0-ci
       - name: Verify modular Skill separation
         run: python scripts/test_skill_separation.py --project-root . --version 0.0.0-ci
+      - name: Verify per-Skill resource ownership
+        run: python scripts/test_skill_resource_ownership.py --project-root . --version 0.0.0-ci
       - name: Validate distribution packages
         run: python scripts/validate_distributions.py --project-root .
       - name: Verify exact five assets and checksums
