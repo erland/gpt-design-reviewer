@@ -20,12 +20,11 @@
 
 ## Begränsningar
 - Detta är statiska/strukturella tester, inte host-baserade funktionella E2E-tester i ChatGPT Plugin, Claude eller OpenCode.
-- GitHub Actions-workflows har anpassats lokalt men inte körts på GitHub; ingen commit eller release har publicerats.
+- GitHub Actions CI har körts och passerat på PR #4 (https://github.com/erland/gpt-design-reviewer/actions/runs/39294379372). Release-workflowet har ännu inte körts med en riktig GitHub-release.
 - Tidigare 1.5-validerare ingår som historiska domänkontroller och är inte längre CI:s distributionsvaliderare.
 - Ett särskilt Engine ZIP har inte lagts till; `analyze_source_tree.py` paketeras som valfritt runtimeverktyg, medan bygg- och testskripten följer projektkällan.
 
 ## Rekommenderat nästa steg
-1. Granska projekt-ZIP och lägg in ändringarna i GitHub via en PR.
-2. Kör GitHub Actions CI på PR och kontrollera alla sex artefakter.
-3. Funktionstesta varje installerad distribution och dess skill-anrop i respektive värdmiljö.
-4. Skapa release först efter godkända host-baserade tester.
+1. Granska och slå samman PR #4 efter godkänd CI och kodgranskning.
+2. Funktionstesta distributionernas skill-anrop i respektive värdmiljö.
+3. Skapa release när den önskade acceptansnivån uppnåtts och kontrollera att release-workflowet publicerar sex ZIP-filer, checksummor och manifest.
