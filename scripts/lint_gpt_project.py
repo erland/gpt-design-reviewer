@@ -67,6 +67,25 @@ def lint(root: Path) -> dict:
         return {"result": "fail", "summary": {"errors": 1, "warnings": 0, "findings": 1},
                 "findings": [finding("GP002", "error", f"Invalid gpt-project.yaml: {exc}", "gpt-project.yaml")]}
 
+    instructions = cfg.get("instructions") or {}
+    if instructions.get("mode") == "modular_skills":
+        try:
+            import importlib.util
+            helper_path = Path(__file__).resolve().parent / "lib/canonical_skill_sources.py"
+            spec = importlib.util.spec_from_file_location("canonical_skill_sources", helper_path)
+            helper = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(helper)
+            definitions = (cfg.get("skills") or {}).get("definitions") or []
+            helper.modules(root, cfg, definitions)
+            if any(str(item.get("source", "")).endswith("/SKILL.md") for item in definitions):
+                findings.append(finding("GPMS002", "error", "Modular Skill source points to a packaging SKILL.md instead of canonical behavior.md"))
+            manifest = root / "portable-skills.json"
+            if manifest.is_file():
+                portable = json.loads(manifest.read_text(encoding="utf-8"))
+                if portable.get("core") == instructions.get("canonical") and instructions.get("canonical") != instructions.get("core"):
+                    findings.append(finding("GPMS003", "error", "Portable skill core points at legacy full instruction instead of modular core"))
+        except (ValueError, OSError, TypeError, KeyError) as exc:
+            findings.append(finding("GPMS001", "error", f"Invalid modular Skill sources: {exc}"))
     instr_ref = cfg.get("instructions", {}).get("canonical")
     if not instr_ref:
         findings.append(finding("GP010", "error", "Canonical instruction is not configured"))
@@ -101,6 +120,29 @@ def lint(root: Path) -> dict:
                 jsonschema.Draft202012Validator(schema).validate(capabilities)
             except Exception as exc:
                 findings.append(finding("GP131", "error", f"Invalid capability contract: {exc}", "gpt-project.yaml"))
+
+    skills = cfg.get("skills")
+    if isinstance(skills, dict):
+        schema_ref = skills.get("schema", "schemas/skill-contract.schema.json")
+        schema_path = root / schema_ref
+        if not schema_path.exists():
+            findings.append(finding("GP125", "error", "Skill contract schema is missing", schema_ref))
+        else:
+            try:
+                import jsonschema
+                schema = json.loads(schema_path.read_text(encoding="utf-8"))
+                jsonschema.Draft202012Validator(schema).validate(skills)
+                for skill in skills.get("definitions", []):
+                    for ref_key in ("references", "assets", "scripts"):
+                        for ref in skill.get(ref_key, []) or []:
+                            if not exists_ref(root, ref):
+                                findings.append(finding(
+                                    "GP126", "error",
+                                    f"Canonical skill {skill.get('id', '<unknown>')} references missing {ref_key[:-1]}",
+                                    ref
+                                ))
+            except Exception as exc:
+                findings.append(finding("GP127", "error", f"Invalid skill contract: {exc}", "gpt-project.yaml"))
 
     artifacts = cfg.get("artifacts")
     if isinstance(artifacts, dict) and "outputs" in artifacts:
@@ -148,6 +190,63 @@ def lint(root: Path) -> dict:
                             findings.append(finding("GP161", "error", "Declared runtime tool script does not exist", script_ref))
             except Exception as exc:
                 findings.append(finding("GP162", "error", f"Invalid tool contract: {exc}", "gpt-project.yaml"))
+
+    # New-project runtime completeness. Policy text alone is not sufficient: a faster
+    # reasoning mode must not be able to silently collapse peer evaluation to Chat + Custom GPT.
+    analysis_runtime = cfg.get("analysis", {}).get("runtime")
+    if isinstance(analysis_runtime, dict) and analysis_runtime.get("strategy") == "peer_candidates":
+        candidates = analysis_runtime.get("candidates") or []
+        candidate_ids = [item.get("runtime_id") for item in candidates if isinstance(item, dict)]
+        if len(candidate_ids) != len(set(candidate_ids)):
+            findings.append(finding("GP170", "error", "Duplicate runtime candidates in analysis", "gpt-project.yaml"))
+
+        registered_ids = cfg.get("runtime_parity", {}).get("registered_runtimes") or []
+        if not registered_ids:
+            registered_ids = [
+                item.get("runtime_id")
+                for item in (cfg.get("build_system", {}).get("runtime_targets") or {}).values()
+                if isinstance(item, dict) and item.get("runtime_id")
+            ]
+        missing = sorted(set(registered_ids) - set(candidate_ids))
+        if missing:
+            findings.append(finding(
+                "GP171", "error",
+                "Analysis is missing registered runtime candidates: " + ", ".join(missing),
+                "gpt-project.yaml"
+            ))
+
+        for item in candidates:
+            if isinstance(item, dict) and "activate_by_default" not in item:
+                findings.append(finding(
+                    "GP172", "error",
+                    f"Runtime candidate {item.get('runtime_id', '<unknown>')} is missing activate_by_default",
+                    "gpt-project.yaml"
+                ))
+
+        runtime_targets = cfg.get("build_system", {}).get("runtime_targets") or {}
+        target_for_runtime = {
+            item.get("runtime_id"): target
+            for target, item in runtime_targets.items()
+            if isinstance(item, dict) and item.get("runtime_id")
+        }
+        selected_targets = set(cfg.get("build_system", {}).get("targets") or [])
+        for item in candidates:
+            if not isinstance(item, dict) or not item.get("activate_by_default"):
+                continue
+            runtime_id = item.get("runtime_id")
+            target = target_for_runtime.get(runtime_id)
+            if not target:
+                findings.append(finding(
+                    "GP173", "error",
+                    f"Default-active runtime {runtime_id} has no build target",
+                    "gpt-project.yaml"
+                ))
+            elif target not in selected_targets:
+                findings.append(finding(
+                    "GP174", "error",
+                    f"Default-active runtime {runtime_id} is omitted from build_system.targets",
+                    "gpt-project.yaml"
+                ))
 
     # Small-model/runtime-complexity contract. This is opt-in per project but GPT Byggaren
     # should generate it for new projects. Critical behavior must be directly present in the
