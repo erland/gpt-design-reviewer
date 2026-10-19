@@ -1,12 +1,9 @@
 name: Build release distributions
-
 on:
   release:
     types: [published]
-
 permissions:
   contents: write
-
 jobs:
   build-release:
     runs-on: ubuntu-latest
@@ -18,46 +15,30 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pyyaml jsonschema
+        run: python -m pip install pyyaml jsonschema pytest
       - name: Derive version from release tag
         id: version
         shell: bash
         run: |
           set -euo pipefail
           TAG="${{ github.event.release.tag_name }}"
-          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "Unsupported release tag: $TAG"
-            exit 1
-          fi
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || exit 1
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
-      - name: Lint project
-        run: python scripts/lint_gpt_project.py --project-root .
-      - name: Run structural evals
-        run: python scripts/run_evals.py --project-root .
-      - name: Check source-tree hygiene before build
-        run: python scripts/project_hygiene.py --project-root . --mode final
-      - name: Build all release distributions
+      - name: Lint, evals, hygiene
+        run: |
+          python scripts/lint_gpt_project.py --project-root .
+          python scripts/validate_gpt_builder_1_5_contract.py
+          python scripts/run_evals.py --project-root .
+          python scripts/project_hygiene.py --project-root . --mode final
+      - name: Build five release distributions
         run: python scripts/build_distributions.py --project-root . --version "${{ steps.version.outputs.version }}"
-      - name: Validate distributions
-        run: python scripts/validate_distributions.py --project-root .
-
-      - name: Validate GPT Builder 1.5 release runtime artifacts
-        run: python scripts/validate_runtime_artifacts_1_5.py --version "${{ steps.version.outputs.version }}" --dir dist
-
-      - name: Validate exact release asset set
-        run: python scripts/validate_release_assets_1_5.py --version "${{ steps.version.outputs.version }}" --dir dist
-
-      - name: Validate final GPT Builder 1.5 readiness
-        run: python scripts/validate_gpt_builder_1_5_release_readiness.py
-      - name: Check runtime parity
-        run: python scripts/check_runtime_parity.py --project-root .
-      - name: Upload release artifacts
+      - name: Validate packages and release assets
+        run: |
+          python scripts/validate_distributions.py --project-root .
+          python scripts/verify_modern_release.py --version "${{ steps.version.outputs.version }}"
+      - name: Upload exact assets to GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: bash
         run: |
           set -euo pipefail
-          mapfile -t assets < <(python scripts/validate_release_assets_1_5.py --version "${{ steps.version.outputs.version }}" --dir dist --print-paths)
-          gh release upload "${{ github.event.release.tag_name }}" "${assets[@]}" --clobber
+          gh release upload "${{ github.event.release.tag_name }}" dist/*.zip dist/SHA256SUMS.txt dist/DELIVERY-MANIFEST.json --clobber

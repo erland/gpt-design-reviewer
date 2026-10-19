@@ -10,6 +10,15 @@ import shutil
 import sys
 import zipfile
 from pathlib import Path
+# Support CLI execution and direct importlib loading used by regression tests.
+import importlib.util as _skill_importlib
+_skill_module_path = Path(__file__).resolve().parent / "lib" / "canonical_skill_sources.py"
+_skill_spec = _skill_importlib.spec_from_file_location("canonical_skill_sources", _skill_module_path)
+_skill_module = _skill_importlib.module_from_spec(_skill_spec)
+_skill_spec.loader.exec_module(_skill_module)
+projected_instruction = _skill_module.projected_instruction
+skill_instruction = _skill_module.skill_instruction
+is_modular = _skill_module.is_modular
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
 if str(SCRIPTS_DIR) not in sys.path:
@@ -30,8 +39,6 @@ except Exception as exc:
     raise SystemExit("PyYAML is required to run build_distributions.py") from exc
 
 
-ROOT = Path(__file__).resolve().parents[1]
-REGISTRY_PATH = ROOT / "runtime-distribution-registry.yaml"
 FIXED_ZIP_DATE = (2020, 1, 1, 0, 0, 0)
 
 
@@ -149,8 +156,7 @@ def copy_declared_tool_scripts(root: Path, cfg: dict, target: Path) -> list[str]
         if not src.exists():
             raise SystemExit(f"Declared runtime tool script missing: {script_ref}")
         rel = Path(script_ref)
-        if rel.parts and rel.parts[0] == "scripts":
-            rel = Path(*rel.parts[1:])
+        rel = Path(script_ref).name
         copy_file(src, target / rel)
         copied.append(script_ref)
 
@@ -160,16 +166,75 @@ def copy_declared_tool_scripts(root: Path, cfg: dict, target: Path) -> list[str]
     return copied
 
 
+def copy_portable_skill_modules(root: Path, cfg: dict, target: Path) -> list[str]:
+    """Compile canonical skills and copy their explicit resources for text-first runtimes.
+
+    These files are included as usable references without assuming that Claude
+    Projects or Chat ZIP will automatically install/activate host Skills.
+    """
+    result = []
+    validate_skill_dependencies(canonical_skill_definitions(cfg))
+    for skill in canonical_skill_definitions(cfg):
+        ident = skill["id"]
+        destination = target / ident
+        for category in ("references", "assets", "scripts"):
+            seen = set()
+            for source_ref in skill.get(category, []) or []:
+                source = root / source_ref
+                if not (source.is_file() or (category == "assets" and source.is_dir())) or source.is_symlink() or not source.resolve().is_relative_to(root.resolve()):
+                    raise SystemExit(f"Missing/unsafe canonical skill resource: {source_ref}")
+                if source.name in seen:
+                    raise SystemExit(f"Colliding skill resource filename: {source.name}")
+                seen.add(source.name)
+                if category == "assets" and source.is_dir():
+                    copy_tree_filtered(source, destination / category / source.name)
+                else:
+                    copy_file(source, destination / category / source.name)
+        destination.mkdir(parents=True, exist_ok=True)
+        (destination / "SKILL.md").write_text(
+            compile_skill_markdown(
+                skill,
+                compatibility="portable-reference",
+                canonical_instruction=(
+                    skill_instruction(root, cfg, canonical_skill_definitions(cfg), skill)
+                    if is_modular(cfg) else None
+                ),
+                include_canonical_behavior=is_modular(cfg),
+            ),
+            encoding="utf-8",
+        )
+        result.append(ident)
+    return result
+
+
+def bundle_distribution_engine(root: Path, destination: Path) -> None:
+    """Include the offline project generator in a runtime distribution."""
+    engine = destination / "distribution-engine"
+    engine.mkdir(parents=True, exist_ok=True)
+    required = ("scripts/build_distributions.py", "scripts/lib/project_model.py", "gpt-project.yaml")
+    if any(not (root / relative).is_file() for relative in required):
+        raise FileNotFoundError("Canonical distribution engine is incomplete")
+    copy_file(root / "gpt-project.yaml", engine / "gpt-project.yaml")
+    for folder in ("scripts", "templates"):
+        for source_file in sorted((root / folder).rglob("*")):
+            if not source_file.is_file() or "__pycache__" in source_file.parts or source_file.suffix == ".pyc":
+                continue
+            relative = source_file.relative_to(root)
+            copy_file(source_file, engine / relative)
+
+
 def build_chat(root: Path, cfg: dict, build_root: Path, version: str) -> Path:
     out = build_root / "chat"
     ensure_clean_dir(out)
 
+    bundle_distribution_engine(root, out)
     assistant = out / "assistant"
     policies = assistant / "policies"
     policies.mkdir(parents=True)
 
     instr_src = root / cfg["instructions"]["canonical"]
-    copy_file(instr_src, assistant / "instructions.md")
+    (assistant / "instructions.md").write_text(projected_instruction(root, cfg, canonical_skill_definitions(cfg)), encoding="utf-8")
+    copy_portable_skill_modules(root, cfg, assistant / "skills")
 
     starters_root = root / cfg["structure"]["conversation_starters"]["path"]
     if starters_root.exists():
@@ -336,10 +401,8 @@ def build_custom(root: Path, cfg: dict, build_root: Path, version: str) -> Path:
     kp = builder / "knowledge-package"
     kp.mkdir(parents=True)
 
-    instruction_cfg = cfg["runtime"]["custom_gpt"]["instruction"]
-    instruction_source = instruction_cfg.get("source", cfg["instructions"]["canonical"])
-    instr = (root / instruction_source).read_text(encoding="utf-8")
-    max_chars = int(instruction_cfg["max_characters"])
+    instr = (root / cfg["instructions"]["canonical"]).read_text(encoding="utf-8")
+    max_chars = int(cfg["runtime"]["custom_gpt"]["instruction"]["max_characters"])
     mode = cfg["runtime"]["custom_gpt"]["instruction"]["mode"]
     core_markers = list(cfg.get("instructions", {}).get("core_contract", {}).get("required_markers", []) or [])
     compiled_instr = compile_custom_instruction(instr, mode, max_chars, core_markers)
@@ -485,8 +548,8 @@ def build_claude(root: Path, cfg: dict, build_root: Path, version: str) -> Path:
     instr_src = root / cfg["instructions"]["canonical"]
     instructions_ref = runtime_cfg["project"]["instructions"]
     instructions_path = out / instructions_ref
-    copy_file(instr_src, instructions_path)
-
+    instructions_path.parent.mkdir(parents=True, exist_ok=True)
+    instructions_path.write_text(projected_instruction(root, cfg, canonical_skill_definitions(cfg)), encoding="utf-8")
     knowledge_root = root / cfg["knowledge_architecture"]["canonical_root"]
     knowledge_ref = runtime_cfg["project"]["knowledge"]
     knowledge_target = out / knowledge_ref
@@ -527,57 +590,680 @@ def build_claude(root: Path, cfg: dict, build_root: Path, version: str) -> Path:
     return out
 
 
+
+def expose_canonical_engine_skill_files(engine_root: Path, skill_dir: Path) -> None:
+    """Expose original canonical engine files as ordinary Skill resources."""
+    for file in sorted(engine_root.rglob("*")):
+        if not file.is_file():
+            continue
+        relative = file.relative_to(engine_root)
+        category = "scripts" if relative.parts[0] == "scripts" else "assets"
+        copy_file(file, skill_dir / category / "canonical-engine" / relative)
+
+
+def build_claude_skills(root: Path, cfg: dict, build_root: Path, version: str) -> Path:
+    """Build a Claude Skills distribution with the canonical portable resources."""
+    out = build_root / "claude-skills"
+    ensure_clean_dir(out)
+    canonical_instruction = projected_instruction(root, cfg, canonical_skill_definitions(cfg))
+    validate_skill_dependencies(canonical_skill_definitions(cfg))
+    built_skills = []
+    for skill in canonical_skill_definitions(cfg):
+        skill_id = skill["id"]
+        skill_dir = out / "skills" / skill_id
+        resources = resolve_plugin_skill_resources(root, cfg, skill)
+        _copy_skill_resources(root, skill_dir, resources)
+        if cfg.get("project", {}).get("id") == "gpt-byggaren" and skill_id == "distribution-and-parity":
+            from package_distribution_engine import package as package_engine
+            staging = build_root / "claude-skills-engine"
+            ensure_clean_dir(staging)
+            bundle_distribution_engine(root, staging)
+            expose_canonical_engine_skill_files(staging / "distribution-engine", skill_dir)
+            engine_root = staging / "distribution-engine"
+            package_engine(
+                root=root,
+                version=version,
+                output=skill_dir / "assets" / "gpt-byggaren-engine.zip",
+            )
+        if cfg.get("project", {}).get("id") == "gpt-byggaren":
+            if skill_id == "distribution-and-parity":
+                copy_file(root / "scripts" / "selftest_distribution_engine.py",
+                          skill_dir / "scripts" / "selftest_distribution_engine.py")
+        compiled = dict(skill)
+        compiled.update(resources)
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        (skill_dir / "SKILL.md").write_text(
+            compile_skill_markdown(
+                compiled,
+                canonical_instruction=skill_instruction(root, cfg, canonical_skill_definitions(cfg), skill),
+                include_canonical_behavior=True,
+                runtime_requirements=plugin_script_runtime_requirements(cfg, resources["scripts"]),
+            ),
+            encoding="utf-8",
+        )
+        built_skills.append(skill_id)
+    (out / "README.md").write_text(
+        "# Claude Skills – " + cfg["project"]["name"] + "\n\n"
+        "Install the individual folders under skills/ as Claude Skills. "
+        "Scripts require a compatible execution environment; packaging alone "
+        "does not verify host execution.\\n",
+        encoding="utf-8",
+    )
+    (out / "VERSION").write_text(version + "\n", encoding="utf-8")
+    (out / "runtime-contract.json").write_text(
+        json.dumps(claude_skills_runtime_contract(cfg, built_skills), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    write_manifest(out, cfg["project"]["id"] + "-claude-skills", version, "README.md")
+    return out
+
+
+def canonical_skill_definitions(cfg: dict) -> list[dict]:
+    """Return platform-neutral skill definitions with conservative legacy fallback."""
+    canonical = cfg.get("skills")
+    if isinstance(canonical, dict):
+        definitions = canonical.get("definitions")
+        if isinstance(definitions, list) and definitions:
+            return definitions
+
+    legacy = cfg.get("runtime", {}).get("opencode", {}).get("skills", {})
+    definitions = legacy.get("definitions") if isinstance(legacy, dict) else None
+    if isinstance(definitions, list) and definitions:
+        return definitions
+
+    project = cfg.get("project", {})
+    project_id = str(project.get("id") or "assistant")
+    name = str(project.get("name") or project_id)
+    description = str(project.get("description") or f"Use {name} according to its canonical instructions.").strip()
+    return [{
+        "id": project_id,
+        "name": project_id,
+        "description": description,
+        "references": [],
+        "assets": [],
+        "scripts": [],
+        "_inferred_default": True,
+    }]
+
+
+def validate_skill_dependencies(definitions: list[dict]) -> None:
+    """Fail closed on unknown, self-referential or cyclic Skill handoffs."""
+    ids = [item["id"] for item in definitions]
+    if len(ids) != len(set(ids)):
+        raise ValueError("Duplicate canonical Skill IDs")
+    graph = {}
+    for skill in definitions:
+        dependencies = skill.get("requires_skills", [])
+        if not isinstance(dependencies, list) or len(dependencies) != len(set(dependencies)):
+            raise ValueError(f"Invalid Skill dependencies: {skill['id']}")
+        for dep in dependencies:
+            if dep not in ids or dep == skill["id"]:
+                raise ValueError(f"Unknown or self Skill dependency: {skill['id']} -> {dep}")
+        graph[skill["id"]] = dependencies
+
+    visiting, visited = set(), set()
+    def visit(skill_id: str) -> None:
+        if skill_id in visiting:
+            raise ValueError(f"Cyclic Skill dependencies involving {skill_id}")
+        if skill_id in visited:
+            return
+        visiting.add(skill_id)
+        for dep in graph[skill_id]:
+            visit(dep)
+        visiting.remove(skill_id)
+        visited.add(skill_id)
+    for skill_id in ids:
+        visit(skill_id)
+
+
+def plugin_manifest(cfg: dict, version: str) -> dict:
+    """Build deterministic Plugin v1 metadata from canonical project data only."""
+    project = cfg.get("project") or {}
+    manifest = {
+        "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+        "name": str(project.get("id") or "").strip(),
+        "version": str(version).strip(),
+        "description": str(project.get("description") or "").strip(),
+    }
+
+    author = project.get("author")
+    if isinstance(author, str) and author.strip():
+        manifest["author"] = {"name": author.strip()}
+    elif isinstance(author, dict):
+        name = str(author.get("name") or "").strip()
+        if name:
+            manifest["author"] = {"name": name}
+
+    # Only emit optional metadata when it is explicitly canonical.
+    for source_key, manifest_key in (
+        ("license", "license"),
+        ("homepage", "homepage"),
+        ("repository", "repository"),
+    ):
+        value = project.get(source_key)
+        if isinstance(value, str) and value.strip():
+            manifest[manifest_key] = value.strip()
+
+    missing = [key for key in ("name", "version", "description") if not manifest.get(key)]
+    if missing:
+        raise SystemExit("Plugin manifest requires canonical metadata: " + ", ".join(missing))
+
+    return manifest
+
+
+def write_plugin_manifest(target: Path, cfg: dict, version: str) -> Path:
+    """Write plugin.json deterministically and return its path."""
+    path = target / "plugin.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(plugin_manifest(cfg, version), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def _project_relative_files(root: Path, directory: Path, *, exclude_names: set[str] | None = None) -> list[str]:
+    """Return deterministic project-relative file paths from a canonical directory."""
+    exclude_names = set(exclude_names or set())
+    if not directory.exists():
+        return []
+    return [
+        p.relative_to(root).as_posix()
+        for p in sorted(directory.rglob("*"))
+        if p.is_file() and p.name not in exclude_names
+    ]
+
+
+def _declared_runtime_script_refs(cfg: dict) -> list[str]:
+    """Return only scripts explicitly declared as runtime tools."""
+    refs = []
+    for tool in normalize_tool_contract(cfg).get("tools", []):
+        if tool.get("type") != "script":
+            continue
+        ref = tool.get("script")
+        if ref:
+            refs.append(str(ref))
+    return sorted(set(refs))
+
+
+def resolve_plugin_skill_resources(root: Path, cfg: dict, skill: dict) -> dict[str, list[str]]:
+    """Resolve canonical resources into the Plugin v1 references/assets/scripts model.
+
+    Explicit skill metadata wins per resource class. When a class is not declared,
+    Plugin v1 uses a conservative project-level fallback:
+    canonical Knowledge becomes references, but assets are only included when
+    explicitly declared by the Skill. Only declared runtime tool scripts become scripts.
+    """
+    knowledge_root = root / cfg.get("knowledge_architecture", {}).get("canonical_root", "knowledge")
+
+    fallback = {
+        "references": _project_relative_files(root, knowledge_root, exclude_names={"KNOWLEDGE.md"}),
+        "assets": [],
+        "scripts": _declared_runtime_script_refs(cfg),
+    }
+
+    # New modular projects can opt into explicit resource ownership.
+    # The default retains legacy project-wide inheritance for existing projects.
+    explicit = (cfg.get("skills") or {}).get("resource_policy") == "explicit"
+    resolved: dict[str, list[str]] = {}
+    for key in ("references", "assets", "scripts"):
+        declared = skill.get(key)
+        if explicit and not isinstance(declared, list):
+            raise ValueError(
+                f"Skill {skill.get('id', '<unknown>')} must declare {key} "
+                "(use [] when no resources are needed)"
+            )
+        values = list(declared) if isinstance(declared, list) else list(fallback[key])
+        unique = sorted(dict.fromkeys(str(value) for value in values))
+        for ref in unique:
+            src = (root / ref).resolve()
+            if not src.is_relative_to(root.resolve()) or not src.exists() or (root / ref).is_symlink() or not (src.is_file() or (key == "assets" and src.is_dir())):
+                raise SystemExit(f"Plugin skill {skill.get('id', '<unknown>')} {key[:-1]} missing/unsafe: {ref}")
+        resolved[key] = unique
+    return resolved
+
+
+def plugin_script_runtime_requirements(cfg: dict, scripts: list[str] | None = None) -> dict:
+    """Derive requirements from scripts actually packaged in a Skill.
+
+    A None selection retains the legacy project-wide behavior. An explicit
+    empty selection requires no code execution. This does not alter the
+    project-wide runtime contract or the Work engine's special handoff.
+    """
+    selected = None if scripts is None else set(scripts)
+    tools = [
+        tool for tool in normalize_tool_contract(cfg).get("tools", [])
+        if tool.get("type") == "script" and tool.get("script")
+        and (selected is None or tool["script"] in selected)
+    ]
+    if not tools:
+        return {
+            "code_execution": {"level": "not_required", "languages": [], "fallback": "not_applicable"}
+        }
+
+    required = any(tool.get("requirement") == "required" for tool in tools)
+    blocking = any(
+        tool.get("requirement") == "required" and tool.get("runtime_fallback") == "block"
+        for tool in tools
+    )
+    languages = sorted({
+        "python" if str(tool.get("script", "")).endswith(".py") else "other"
+        for tool in tools
+    })
+    return {
+        "code_execution": {
+            "level": "required" if required else "recommended",
+            "languages": languages,
+            "fallback": "block" if blocking else "degrade",
+        }
+    }
+
+
+def compile_skill_markdown(
+    skill: dict,
+    *,
+    compatibility: str | None = None,
+    canonical_instruction: str | None = None,
+    include_canonical_behavior: bool = False,
+    runtime_requirements: dict | None = None,
+) -> str:
+    """Compile one canonical skill definition into deterministic SKILL.md text."""
+    # Agent Skills frontmatter name is the directory/technical identifier,
+    # not the human-readable display name.
+    import re
+    skill_id = skill["id"]
+    if not isinstance(skill_id, str) or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", skill_id) or len(skill_id) > 64:
+        raise ValueError(f"Invalid Agent Skill ID: {skill_id!r}")
+    frontmatter = [
+        "---",
+        f"name: {skill_id}",
+        f"description: {skill['description']}",
+    ]
+    if compatibility:
+        frontmatter.append(f"compatibility: {compatibility}")
+    frontmatter.extend([
+        "metadata:",
+        "  source: generated-from-canonical-project",
+        "---",
+        "",
+        "## Purpose",
+        "",
+        str(skill["description"]).strip(),
+        "",
+    ])
+
+    body = frontmatter
+
+    if (skill.get("_inferred_default") or include_canonical_behavior) and canonical_instruction:
+        body.extend([
+            "## Canonical behavior",
+            "",
+            canonical_instruction.strip(),
+            "",
+        ])
+
+    dependencies = list(skill.get("requires_skills", []) or [])
+    if dependencies:
+        body.extend([
+            "## Skill dependencies",
+            "",
+            "When this workflow needs a capability owned by another Skill, "
+            "activate or consult that Skill using its own installed resources. "
+            "Do not assume its files exist relative to this Skill. "
+            "If the host cannot activate another Skill, use the complete "
+            "canonical instruction where available, or report the blocked "
+            "operation without simulating it.",
+            "",
+        ])
+        for dependency in dependencies:
+            body.append(f"- `{dependency}`")
+        body.append("")
+
+    references = list(skill.get("references", []) or [])
+    if references:
+        body.extend(["## References", ""])
+        for ref in references:
+            body.append(f"- Read `references/{Path(ref).name}` when that material is relevant.")
+        body.append("")
+
+    assets = list(skill.get("assets", []) or [])
+    if assets:
+        body.extend(["## Assets", ""])
+        for asset in assets:
+            body.append(f"- Use `assets/{Path(asset).name}` when the task requires that resource.")
+        body.append("")
+
+    scripts = list(skill.get("scripts", []) or [])
+    if scripts:
+        requirements = runtime_requirements or {}
+        code_execution = requirements.get("code_execution") or {}
+        level = code_execution.get("level", "recommended")
+        languages = ", ".join(code_execution.get("languages") or []) or "compatible"
+        fallback = code_execution.get("fallback", "degrade")
+        body.extend([
+            "## Runtime requirements",
+            "",
+            f"- Code execution: {level}.",
+            f"- Required script runtime/language: {languages}.",
+            "- When compatible code execution is available, run the packaged script resources rather than simulating their deterministic result.",
+            f"- If compatible code execution is unavailable, apply fallback: {fallback}.",
+            "",
+            "## Scripts",
+            "",
+        ])
+        for script in scripts:
+            body.append(
+                f"- Use `scripts/{Path(script).name}` as a script resource when the host provides "
+                "compatible code execution. An MCP wrapper is not required merely to package or use "
+                "the script resource."
+            )
+        body.append("")
+
+    return "\n".join(body).rstrip() + "\n"
+
+
 def build_opencode_skills(root: Path, cfg: dict, out: Path) -> list[str]:
-    """Generate OpenCode skills from declared workflow/reference sources."""
+    """Generate OpenCode skills from the canonical skill contract."""
     runtime_cfg = cfg["runtime"]["opencode"]
     skills_cfg = runtime_cfg.get("skills", {})
     if not skills_cfg.get("enabled"):
         return []
 
     skill_root = out / skills_cfg.get("directory", ".opencode/skills")
+    canonical_instruction = projected_instruction(root, cfg, canonical_skill_definitions(cfg))
+    validate_skill_dependencies(canonical_skill_definitions(cfg))
     built: list[str] = []
-    for skill in skills_cfg.get("definitions", []):
+
+    for skill in canonical_skill_definitions(cfg):
         skill_id = skill["id"]
         skill_dir = skill_root / skill_id
-        references_dir = skill_dir / "references"
-        references_dir.mkdir(parents=True, exist_ok=True)
 
-        reference_lines = []
-        for ref in skill.get("references", []):
-            src = root / ref
-            if not src.exists():
-                raise SystemExit(f"OpenCode skill reference missing: {ref}")
-            dst = references_dir / src.name
-            copy_file(src, dst)
-            reference_lines.append(f"- Read `references/{src.name}` when that part of the workflow is relevant.")
+        for ref_key, target_name in (
+            ("references", "references"),
+            ("assets", "assets"),
+            ("scripts", "scripts"),
+        ):
+            for ref in skill.get(ref_key, []) or []:
+                src = root / ref
+                if not src.exists():
+                    raise SystemExit(f"Canonical skill {ref_key[:-1]} missing: {ref}")
+                if ref_key == "assets" and src.is_dir():
+                    copy_tree_filtered(src, skill_dir / target_name / src.name)
+                else:
+                    copy_file(src, skill_dir / target_name / src.name)
 
-        workflow = skill.get("workflow") or [
-            "Read the workspace state before choosing work.",
-            "Prefer blockers, failed validation, hygiene, and missing dependencies before the next planned step.",
-            "Treat the development plan as guiding rather than mechanical.",
-            "After a change, validate, update project state, and rebuild the complete project package when applicable.",
-            "Do not ask the user to repeat project history already present in workspace/state.",
-        ]
-        workflow_lines = "\n".join(f"{i}. {line}" for i, line in enumerate(workflow, 1))
-        body = (
-            "---\n"
-            f"name: {skill['name']}\n"
-            f"description: {skill['description']}\n"
-            "compatibility: opencode\n"
-            "metadata:\n"
-            "  source: generated-from-canonical-project\n"
-            "---\n\n"
-            "## Purpose\n\n"
-            f"{skill['description']}\n\n"
-            "## Workflow\n\n"
-            + workflow_lines
-            + "\n\n## References\n\n"
-            + "\n".join(reference_lines)
-            + "\n"
+        body = compile_skill_markdown(
+            skill,
+            compatibility="opencode",
+            canonical_instruction=skill_instruction(root, cfg, canonical_skill_definitions(cfg), skill),
+            include_canonical_behavior=is_modular(cfg),
         )
+        skill_dir.mkdir(parents=True, exist_ok=True)
         (skill_dir / "SKILL.md").write_text(body, encoding="utf-8")
         built.append(skill_id)
+
     return built
+
+
+def claude_skills_runtime_contract(cfg: dict, built_skills: list[str] | None = None) -> dict:
+    """Claude Skills contract: portable resources, host-dependent execution."""
+    snapshot = plugin_runtime_contract(cfg, built_skills)
+    snapshot["runtime_id"] = "claude_skills"
+    return snapshot
+
+
+def plugin_runtime_contract(cfg: dict, built_skills: list[str] | None = None) -> dict:
+    """Compile canonical assistant contracts into an OpenAI Plugin snapshot."""
+    built_skills = list(built_skills or [])
+    return {
+        "schema_version": 1,
+        "runtime_id": "openai_plugin",
+        "capabilities": normalize_capability_contract(cfg),
+        "artifacts": normalize_artifact_contract(cfg),
+        "workspace_state": normalize_workspace_state_contract(cfg),
+        "tools": normalize_tool_contract(cfg),
+        "adapter": {
+            "mode": "openai_plugin",
+            "skills_first": True,
+            "skills": built_skills,
+            "mcp_generated": False,
+            "ui_generated": False,
+            "hooks_generated": False,
+            "runtime_requirements": plugin_script_runtime_requirements(cfg),
+            "script_resources": {
+                "packaged": _declared_runtime_script_refs(cfg),
+                "execution": "host_code_execution_when_available",
+                "mcp_required_for_resource_use": False,
+                "mcp_role": "Use MCP when a guaranteed explicit tool interface is required.",
+            },
+            "parity_notes": {
+                "behavior": "Canonical behavior is projected through skills.",
+                "artifact": "Plugin package is generated as a runtime distribution.",
+                "workspace_state": "Persistent workspace/state depends on the host runtime and is not created by Plugin v1.",
+                "tool": "Canonical scripts are packaged as skill resources and may run directly when the host provides compatible code execution. Plugin v1 does not generate a guaranteed MCP tool interface.",
+                "capability": "External tool execution and advanced integrations depend on the host runtime in Plugin v1.",
+            },
+        },
+    }
+
+
+def _copy_skill_resources(root: Path, skill_dir: Path, resources: dict[str, list[str]]) -> None:
+    """Copy resolved skill resources, including shared runtime script dependencies."""
+    for key in ("references", "assets", "scripts"):
+        seen_names: set[str] = set()
+        for ref in resources.get(key, []):
+            src = root / ref
+            name = src.name
+            if name in seen_names:
+                raise SystemExit(f"Plugin skill resource collision in {key}: {name}")
+            seen_names.add(name)
+            if key == "assets" and src.is_dir():
+                copy_tree_filtered(src, skill_dir / key / name)
+            else:
+                copy_file(src, skill_dir / key / name)
+
+    # Only copy shared helpers explicitly imported by packaged scripts.
+    # Avoid shipping the whole GPT Builder implementation with unrelated Skills.
+    if resources.get("scripts"):
+        import ast
+        shared_lib = root / "scripts" / "lib"
+        required = set()
+        pending = [root / ref for ref in resources["scripts"]]
+        while pending:
+            source = pending.pop()
+            if not source.is_file() or source.suffix != ".py":
+                continue
+            try:
+                tree = ast.parse(source.read_text(encoding="utf-8"))
+            except SyntaxError:
+                continue
+            for node in ast.walk(tree):
+                module = node.module if isinstance(node, ast.ImportFrom) else None
+                if module and (module == "lib" or module.startswith("lib.")):
+                    names = [a.name for a in node.names] if module == "lib" else [module.split(".")[1]]
+                    for name in names:
+                        helper = shared_lib / (name + ".py")
+                        if helper.is_file() and helper not in required:
+                            required.add(helper)
+                            pending.append(helper)
+        if root.name == "gpt-byggaren":
+            copy_tree_filtered(shared_lib, skill_dir / "scripts" / "lib")
+            return
+        if required:
+            init = shared_lib / "__init__.py"
+            if init.is_file():
+                copy_file(init, skill_dir / "scripts" / "lib" / "__init__.py")
+            for helper in sorted(required):
+                copy_file(helper, skill_dir / "scripts" / "lib" / helper.name)
+
+
+def build_plugin(root: Path, cfg: dict, build_root: Path, version: str) -> Path:
+    """Build a portable skills-first OpenAI Plugin v1 distribution."""
+    out = build_root / "plugin"
+    ensure_clean_dir(out)
+    write_plugin_manifest(out, cfg, version)
+
+    canonical_instruction = projected_instruction(root, cfg, canonical_skill_definitions(cfg))
+    validate_skill_dependencies(canonical_skill_definitions(cfg))
+    built_skills: list[str] = []
+    for skill in canonical_skill_definitions(cfg):
+        skill_id = skill["id"]
+        skill_dir = out / "skills" / skill_id
+        resources = resolve_plugin_skill_resources(root, cfg, skill)
+        _copy_skill_resources(root, skill_dir, resources)
+
+        compiled_skill = dict(skill)
+        compiled_skill.update(resources)
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        skill_markdown = compile_skill_markdown(
+            compiled_skill,
+            canonical_instruction=skill_instruction(root, cfg, canonical_skill_definitions(cfg), skill),
+            include_canonical_behavior=True,
+            runtime_requirements=plugin_script_runtime_requirements(cfg, resources["scripts"]),
+        )
+        if cfg.get("project", {}).get("id") == "gpt-byggaren" and skill_id == "distribution-and-parity":
+            skill_markdown += (
+                "\\n## Mandatory engine access self-test\\n\\n"
+                "Before building a generated GPT, run "
+                "`scripts/selftest_distribution_engine.py --source <materialized-engine-root>` "
+                "in a compatible Python workspace. The self-test checks source files, "
+                "materialization, SHA-256 integrity, the original installer and a "
+                "six-archive smoke build. Report the first failed stage and its "
+                "error verbatim. If no writable workspace or Python execution "
+                "is available, report materialize/installer as unavailable; "
+                "never claim self-test success or invent an alternative packager.\\n"
+            )
+        if cfg.get("project", {}).get("id") == "gpt-byggaren":
+            is_ci_version = version == "0.0.0-ci" or version.endswith("-ci")
+            release_link = (
+                "https://github.com/erland/gpt-byggaren/releases/download/"
+                f"v{version}/gpt-byggaren-engine-{version}.zip"
+            )
+            delivery_instruction = (
+                "This is a CI/test Plugin version. Do not reference GitHub Actions, "
+                "CI artifacts or pretend a Release asset exists. If an actual downloadable "
+                "file cannot be exported, simply ask the user to attach "
+                f"`gpt-byggaren-engine-{version}.zip` and continue in source-only fallback."
+                if is_ci_version else
+                "For a released Plugin, present this exact-version direct download "
+                "link to the Engine ZIP in the corresponding GitHub Release: "
+                + release_link
+                + " . Tell the user to open this link, download the Engine ZIP, attach the ZIP in this conversation, and then say Gör nästa steg. Do not use latest or a different release version."
+            )
+            skill_markdown += (
+                "\n## Plugin engine preflight and handoff\n\n"
+                "At the first actual GPT project creation or resumption, first " 
+                "try the original packaged engine in `scripts/distribution-engine/`. "
+                "Only if direct execution is unavailable, run a "
+                "one-time, non-blocking engine access preflight. Do not check on "
+                "unrelated questions or repeatedly on every turn. Test whether "
+                f"a user-attached `gpt-byggaren-engine-{version}.zip` is a real readable "
+                "file in the Python workspace. "
+                "If missing, explain the actual download-and-attach steps in the conversation language, not merely the Engine name. "
+                "If accessible, run the unchanged canonical integrity checks and "
+                "self-test and reuse the engine in the current workspace. "
+                "The fallback Engine ZIP is distributed separately through the matching "
+                "release, not embedded in this Plugin. Never invent a sandbox "
+                "download or claim an inaccessible file was exported. "
+                + delivery_instruction
+                + " If the user does not attach the file, continue with explicitly "
+                  "unverified declarative source-only fallback. Never use a "
+                  "GitHub Python downloader, alternative packager or MCP.\n"
+            )
+            if skill_id == "distribution-and-parity":
+                # Reuse canonical packaging to expose original scripts as Work files.
+                bundle_distribution_engine(root, skill_dir / "scripts")
+                copy_file(root / "scripts" / "selftest_distribution_engine.py",
+                          skill_dir / "scripts" / "selftest_distribution_engine.py")
+                skill_markdown += (
+                    "\n## Direct installed engine execution (preferred)\n\n"
+                    "If the installed Skill scripts are exposed as real files, run the original "
+                    "`scripts/distribution-engine/scripts/detect_plugin_engine_runtime.py` "
+                    "as a file with `--engine-root` set to the observed installed "
+                    "Skill's `scripts/distribution-engine/` and optionally "
+                    "`--fallback-zip` pointing at an actual attached ZIP. "
+                    "If the detector itself is inaccessible, do NOT copy or simulate it: "
+                    "use the existing attached Engine ZIP preflight directly. "
+                    "Read the JSON mode when the detector actually runs: direct, "
+                    "zip_fallback, or blocked. A zip_fallback result only proves "
+                    "file presence: validate archive identity, version, hashes, "
+                    "safe paths and original self-test before declaring success. "
+                    "Direct means files are present, NOT that self-test passed. "
+                    "Do not silently fall back when a real self-test fails. "
+                    "Then check whether "
+                    "`scripts/distribution-engine/scripts/selftest_distribution_engine.py` "
+                    "is a real file relative to the installed Skill. The engine root "
+                    "is `scripts/distribution-engine/`. Execute the original "
+                    "self-test with `--source` set to that engine root, and record "
+                    "actual stdout, stderr and exit code. Run the original canonical "
+                    "installer and builders only after a PASS, with a separate "
+                    "writable project workspace outside the plugin cache. "
+                    "Never simulate execution or reconstruct scripts. Only fall "
+                    "back to the separately released Engine ZIP if direct file "
+                    "access or execution is unavailable; report actual test errors.\n"
+                )
+        # Generic Engine handoff for generated GPT projects; no embedded scripts.
+        if cfg.get("project", {}).get("id") != "gpt-byggaren":
+            from lib.engine_package import engine_config, engine_filename
+            if engine_config(cfg):
+                engine_name = engine_filename(cfg, version)
+                is_test = version.endswith("-ci") or version.startswith("0.0.0-")
+                engine_cfg = cfg["engine"]
+                release_repo = engine_cfg.get("release_repository")
+                link = (
+                    f"https://github.com/{release_repo}/releases/download/v{version}/{engine_name}"
+                    if isinstance(release_repo, str) and "/" in release_repo and not is_test
+                    else None
+                )
+                handoff = (
+                    f"Direct Engine ZIP download for this exact release: {link}. "
+                    if link else
+                    "No verified release download link is configured for this build. "
+                )
+                skill_markdown += (
+                    "\n## Executable Engine ZIP preflight\n\n"
+                    "At the first task requiring executable scripts, check once "
+                    f"for a real user-attached `{engine_name}` file in the Python workspace. "
+                    "The Plugin does not embed the executable engine. "
+                    + handoff +
+                    "If missing, ask once for the Engine ZIP and permit non-executable "
+                    "work without falsely claiming a completed build. "
+                    "Before execution, verify engine-package.json, expected engine_id "
+                    f"({cfg['project']['id']}), version ({version}), file hashes, "
+                    "and safe relative paths; execute only the declared selftest "
+                    f"({engine_cfg['selftest']}) in a compatible workspace. "
+                    "Never invent an archive, link, test result or replacement engine.\n"
+                )
+        (skill_dir / "SKILL.md").write_text(skill_markdown, encoding="utf-8")
+        built_skills.append(skill_id)
+
+    if not built_skills:
+        raise SystemExit("Plugin build requires at least one skill")
+
+    readme_tpl = (root / cfg["runtime"]["plugin"]["templates"]["readme"]).read_text(encoding="utf-8")
+    (out / "README.md").write_text(
+        render_template(readme_tpl, {
+            "GPT_NAME": cfg["project"]["name"],
+            "VERSION": version,
+            "SKILLS": "\n".join(f"- `{skill_id}`" for skill_id in built_skills),
+        }),
+        encoding="utf-8",
+    )
+    (out / "VERSION").write_text(version + "\n", encoding="utf-8")
+    (out / "runtime-contract.json").write_text(
+        json.dumps(plugin_runtime_contract(cfg, built_skills), ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    write_manifest(out, cfg["project"]["id"] + "-plugin", version, "plugin.json")
+    manifest_path = out / "MANIFEST.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["adapter_id"] = "openai_plugin"
+    manifest["plugin_manifest"] = "plugin.json"
+    manifest["skills"] = built_skills
+    manifest["contract_snapshot"] = "runtime-contract.json"
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return out
 
 
 def _opencode_tool_name(tool_id: str) -> str:
@@ -585,27 +1271,51 @@ def _opencode_tool_name(tool_id: str) -> str:
 
 
 def _opencode_tool_wrapper(tool: dict, script_ref: str) -> str:
+    """Generate a workspace-aware OpenCode adapter using each script's real CLI."""
     tool_id = tool["id"]
     description = tool.get("purpose", tool_id).replace('"', '\\"')
-    arg_schema = 'projectRoot: tool.schema.string().optional().describe("Project root relative to the worktree")'
+    arg_schema = 'projectRoot: tool.schema.string().optional().describe("Target project directory")'
     if tool_id == "project-hygiene":
         arg_schema += ',\n    mode: tool.schema.enum(["checkpoint", "final"]).optional(),\n    fix: tool.schema.boolean().optional()'
-        command_lines = '''
+        command_lines = """
     const mode = args.mode ?? "checkpoint"
     const fix = args.fix ? ["--fix"] : []
-    const cmd = ["python3", script, "--project-root", projectRoot, "--mode", mode, ...fix, "--json"]'''
+    const cmd = ["python3", script, "--project-root", projectRoot, "--mode", mode, ...fix, "--json"]"""
     elif tool_id == "build-distributions":
         arg_schema += ',\n    version: tool.schema.string().optional(),\n    targets: tool.schema.string().optional()'
-        command_lines = '''
+        command_lines = """
     const version = args.version ?? "0.0.0-dev"
-    const targets = args.targets ?? "project,chat,custom-gpt,claude,opencode"
-    const cmd = ["python3", script, "--project-root", projectRoot, "--version", version, "--targets", targets]'''
+    const targets = args.targets ?? "project,chat,custom-gpt,claude_project,claude_skills,opencode,plugin"
+    const cmd = ["python3", script, "--project-root", projectRoot, "--version", version, "--targets", targets]"""
+    elif tool_id == "distribution-build":
+        arg_schema += ',\n    version: tool.schema.string().optional()'
+        command_lines = """
+    const cmd = ["python3", script, "--version", args.version ?? "0.0.0-dev"]"""
+    elif tool_id in ("book-export", "book-build"):
+        arg_schema += ',\n    outputDir: tool.schema.string().optional(),\n    format: tool.schema.enum(["epub", "pdf", "all"]).optional()'
+        if tool_id == "book-export":
+            command_lines = """
+    const cmd = ["python3", script, "--format", args.format ?? "all", "--output-dir", path.resolve(projectRoot, args.outputDir ?? "exports")]"""
+        else:
+            command_lines = """
+    const cmd = ["python3", script, "--output-dir", path.resolve(projectRoot, args.outputDir ?? "exports")]"""
+    elif tool_id in ("project-integrity",):
+        arg_schema += ',\n    operation: tool.schema.enum(["verify", "status"]).optional()'
+        command_lines = """
+    const cmd = ["python3", script, args.operation ?? "verify", projectRoot]"""
+    elif tool_id in ("project-validation",):
+        command_lines = """
+    const cmd = ["python3", script, projectRoot]"""
+    elif tool_id in ("distribution-validation",):
+        command_lines = """
+    const cmd = ["python3", script]"""
     elif tool_id == "recommend-next-step":
-        command_lines = '''
-    const cmd = ["python3", script, "--project-root", projectRoot, "--json"]'''
+        command_lines = """
+    const cmd = ["python3", script, "--project-root", projectRoot, "--json"]"""
     else:
-        command_lines = '''
-    const cmd = ["python3", script, "--project-root", projectRoot]'''
+        # Unrecognized tools must not receive invented CLI flags.
+        command_lines = """
+    const cmd = ["python3", script]"""
 
     return f'''import {{ tool }} from "@opencode-ai/plugin"
 import path from "path"
@@ -618,7 +1328,7 @@ export default tool({{
   async execute(args, context) {{
     const projectRoot = path.resolve(context.worktree, args.projectRoot ?? ".")
     const script = path.join(context.worktree, "{script_ref}"){command_lines}
-    const proc = Bun.spawn(cmd, {{ cwd: context.worktree, stdout: "pipe", stderr: "pipe" }})
+    const proc = Bun.spawn(cmd, {{ cwd: projectRoot, stdout: "pipe", stderr: "pipe" }})
     const stdout = await new Response(proc.stdout).text()
     const stderr = await new Response(proc.stderr).text()
     const code = await proc.exited
@@ -700,7 +1410,7 @@ def build_opencode(root: Path, cfg: dict, build_root: Path, version: str) -> Pat
 
     runtime_cfg = cfg["runtime"]["opencode"]
 
-    canonical_instruction = (root / cfg["instructions"]["canonical"]).read_text(encoding="utf-8")
+    canonical_instruction = projected_instruction(root, cfg, canonical_skill_definitions(cfg))
     agents_path = out / runtime_cfg["layout"]["instructions"]
     agents_path.write_text(
         canonical_instruction.rstrip()
@@ -710,7 +1420,7 @@ def build_opencode(root: Path, cfg: dict, build_root: Path, version: str) -> Pat
         + "- Reusable workflows may be available as project-local skills under .opencode/skills/.\n"
         + "- Load a skill when its description matches the current task instead of duplicating that workflow here.\n"
         + "- Use only the explicitly generated OpenCode custom tools for canonical runtime scripts; do not infer extra scripts as tools.\n"
-        + "- The OpenCode workspace is the GPT Byggaren runtime; the GPT project being worked on may be a subdirectory. Pass projectRoot to generated tools when the target project is not the workspace root.\n",
+        + "- The OpenCode workspace runs the installed assistant, and its project files may live in a subdirectory. Pass projectRoot when operating on a separate project directory.\n",
         encoding="utf-8",
     )
 
@@ -759,143 +1469,17 @@ def build_opencode(root: Path, cfg: dict, build_root: Path, version: str) -> Pat
     return out
 
 
-def plugin_runtime_contract(cfg: dict) -> dict:
-    tool_contract = normalize_tool_contract(cfg)
-    script_refs = [
-        tool.get("script")
-        for tool in tool_contract.get("tools", [])
-        if tool.get("type") == "script" and tool.get("script")
-    ]
-    return {
-        "schema_version": 1,
-        "runtime_id": "openai_plugin",
-        "capabilities": normalize_capability_contract(cfg),
-        "artifacts": normalize_artifact_contract(cfg),
-        "workspace_state": normalize_workspace_state_contract(cfg),
-        "tools": tool_contract,
-        "adapter": {
-            "mode": "skills_first",
-            "compatibility": "equivalent_runtime_dependent",
-            "runtime_requirements": {
-                "filesystem": {"read": "required", "write": "required"},
-                "persistent_state": {"level": "required", "authority": "project-status.yaml"},
-                "archive_extract": {"level": "required", "fallback": "manual"},
-                "structured_data": {"level": "recommended"},
-                "code_execution": {"level": "recommended", "fallback": "degrade"},
-            },
-            "script_resources": {
-                "packaged": script_refs,
-                "execution": "host_code_execution_when_available",
-                "mcp_required_for_resource_use": False,
-            },
-        },
-    }
-
-
-def build_plugin(root: Path, cfg: dict, build_root: Path, version: str) -> Path:
-    out = build_root / "plugin"
-    ensure_clean_dir(out)
-    runtime_cfg = cfg["runtime"]["plugin"]
-    skill_cfg = runtime_cfg["skill"]
-    skill_dir = out / runtime_cfg["layout"]["skills"] / skill_cfg["id"]
-
-    plugin_manifest = {
-        "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
-        "name": cfg["project"]["id"],
-        "version": version,
-        "description": cfg["project"]["description"].strip(),
-    }
-    (out / runtime_cfg["layout"]["manifest_file"]).write_text(
-        json.dumps(plugin_manifest, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-
-    canonical = (root / cfg["instructions"]["canonical"]).read_text(encoding="utf-8").strip()
-    workflow = cfg["runtime"]["opencode"]["skills"]["definitions"][0].get("workflow", [])
-    body = [
-        "---",
-        f"name: {skill_cfg['name']}",
-        f"description: {skill_cfg['description']}",
-        "metadata:",
-        "  source: generated-from-canonical-project",
-        "---",
-        "",
-        "## Runtime requirements",
-        "",
-        "- Filesystem read/write and persistent workspace state are required.",
-        "- ZIP/archive extraction is required for ZIP-based source input.",
-        "- Code execution is recommended, not required for the semantic review core.",
-        "- When compatible code execution is available, use packaged scripts for deterministic evidence support.",
-        "- If code execution is unavailable, continue semantic analysis and mark script-derived evidence as unavailable rather than simulating it.",
-        "",
-        "## Canonical behavior",
-        "",
-        canonical,
-        "",
-        "## Workflow",
-        "",
-    ]
-    body.extend(f"{i}. {line}" for i, line in enumerate(workflow, 1))
-
-    body.extend(["", "## References", ""])
-    for ref in skill_cfg.get("references", []):
-        src = root / ref
-        copy_file(src, skill_dir / "references" / src.name)
-        body.append(f"- Read `references/{src.name}` when relevant.")
-
-    body.extend(["", "## Assets", ""])
-    for ref in skill_cfg.get("assets", []):
-        src = root / ref
-        copy_file(src, skill_dir / "assets" / src.name)
-        body.append(f"- Use `assets/{src.name}` for the corresponding final artifact.")
-
-    body.extend(["", "## Scripts", ""])
-    for ref in skill_cfg.get("scripts", []):
-        src = root / ref
-        copy_file(src, skill_dir / "scripts" / src.name)
-        body.append(f"- Use `scripts/{src.name}` as deterministic evidence support when host code execution is available.")
-
-    shared_lib = root / "scripts" / "lib"
-    if skill_cfg.get("scripts") and shared_lib.exists():
-        copy_tree_filtered(shared_lib, skill_dir / "scripts" / "lib")
-
-    (skill_dir / "SKILL.md").write_text("\n".join(body).rstrip() + "\n", encoding="utf-8")
-
-    contract_ref = runtime_cfg["layout"]["runtime_contract"]
-    (out / contract_ref).write_text(
-        json.dumps(plugin_runtime_contract(cfg), ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    (out / "README.md").write_text(
-        "# Design Reviewer – OpenAI Plugin\n\n"
-        "Skills-first runtime with equivalent-runtime-dependent parity. The host must provide "
-        "filesystem read/write and persistent workspace state. Code execution is optional evidence support.\n",
-        encoding="utf-8",
-    )
-    (out / "VERSION").write_text(version + "\n", encoding="utf-8")
-    write_manifest(out, cfg["project"]["id"] + "-plugin", version, f"skills/{skill_cfg['id']}/SKILL.md")
-    manifest_path = out / "MANIFEST.json"
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    manifest["adapter_id"] = "openai_plugin"
-    manifest["contract_snapshot"] = contract_ref
-    manifest["skills"] = [skill_cfg["id"]]
-    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    return out
-
-
 RUNTIME_BUILDERS = {
     "chat": build_chat,
     "custom_gpt": build_custom,
     "claude": build_claude,
+    "claude_skills": build_claude_skills,
     "opencode": build_opencode,
     "plugin": build_plugin,
 }
 
 
 def configured_targets(cfg: dict) -> list[str]:
-    if REGISTRY_PATH.exists():
-        registry = yaml.safe_load(REGISTRY_PATH.read_text(encoding="utf-8"))
-        return ["project"] + [str(target) for target in registry.get("active_targets", [])]
     targets = cfg.get("build_system", {}).get("targets") or ["project"]
     return [str(target) for target in targets]
 
@@ -957,7 +1541,7 @@ def write_checksums(dist: Path) -> None:
 
 def artifact_type_for_distribution(cfg: dict, filename: str, version: str) -> str:
     project_id = cfg["project"]["id"]
-    if filename == f"{project_id}-project.zip":
+    if filename == f"{project_id}-project-{version}.zip":
         return "project_zip"
 
     for target_cfg in (cfg.get("build_system", {}).get("runtime_targets") or {}).values():
@@ -1026,6 +1610,18 @@ def main() -> int:
 
     root = Path(args.project_root).resolve()
     cfg = load_config(root)
+    if isinstance(cfg.get("reconstruction"), dict) and (
+        cfg["reconstruction"].get("release_ready") is not True
+        or cfg["reconstruction"].get("status") != "runtime_parity_verified"
+    ):
+        raise SystemExit(
+            "Reconstructed project is not release-ready: complete and verify "
+            "runtime parity before distribution build or validation"
+        )
+    from lib.project_resource_audit import validate_project_resources
+    missing_resources = validate_project_resources(root, cfg)
+    if missing_resources:
+        raise SystemExit("Incomplete declared GPT project resources:\n" + "\n".join(missing_resources))
     build_root = root / "build"
     dist = root / "dist"
     build_root.mkdir(exist_ok=True)
@@ -1050,9 +1646,41 @@ def main() -> int:
             continue
         build_runtime_target(root, cfg, build_root, dist, version, target)
 
+    # A newly generated project must not ship five identical generic archives.
+    # Compare paths inside the ZIPs, not filenames or ZIP metadata.
+    runtime_archives = []
+    for target in selected_targets:
+        if target == "project":
+            continue
+        target_cfg = runtime_targets.get(target, {})
+        runtime_cfg = cfg.get("runtime", {}).get(target_cfg.get("runtime_key"), {})
+        if not runtime_cfg.get("enabled"):
+            continue
+        name = (target_cfg["filename_pattern"]
+                .replace("<project-id>", project_id)
+                .replace("<version>", version))
+        archive = dist / name
+        if archive.exists():
+            runtime_archives.append((target, archive))
+    if len(runtime_archives) >= 2:
+        from zipfile import ZipFile
+        layouts = {}
+        for target, archive in runtime_archives:
+            with ZipFile(archive) as zf:
+                layouts[target] = frozenset(zf.namelist())
+        if len(set(layouts.values())) == 1:
+            raise SystemExit(
+                "All enabled runtime distributions have identical file layouts; "
+                "use platform-specific builders instead of generic ZIP packaging"
+            )
+
     if "project" in targets:
-        project_zip = dist / f"{project_id}-project.zip"
+        project_zip = dist / f"{project_id}-project-{version}.zip"
         stable_write_zip(project_zip, root, project_files(root))
+
+    from lib.engine_package import package_engine
+    if "plugin" in targets and cfg.get("runtime", {}).get("plugin", {}).get("enabled"):
+        package_engine(root, cfg, version, dist)
 
     write_checksums(dist)
     write_delivery_manifest(dist, cfg, version)

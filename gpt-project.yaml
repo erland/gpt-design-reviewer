@@ -2,8 +2,8 @@ schema_version: 1
 project:
   id: design-reviewer
   name: Design Reviewer
-  description: GPT-projekt för evidensbaserad design review av ett eller flera källkodsträd, prioriterad
-    lösningsstrategi och LLM-anpassad implementationsplan.
+  description: GPT-projekt för evidensbaserad design review av ett eller flera källkodsträd,
+    prioriterad lösningsstrategi och LLM-anpassad implementationsplan.
   profile: zip_first_advanced
 instructions:
   canonical: assistant/instructions.md
@@ -39,7 +39,8 @@ capabilities:
   requirements:
     web:
       level: optional
-      reason: Extern webbresearch är sekundär och används endast när aktuell extern information behövs.
+      reason: Extern webbresearch är sekundär och används endast när aktuell extern
+        information behövs.
     filesystem:
       read: required
       write: required
@@ -51,14 +52,16 @@ capabilities:
       reason: Små analysverktyg kan ge reproducerbar statistik och beroendeindikatorer.
     structured_data:
       level: recommended
-      reason: Observationer, evidens och analysstatus behöver kunna representeras konsekvent.
+      reason: Observationer, evidens och analysstatus behöver kunna representeras
+        konsekvent.
     persistent_state:
       level: required
-      reason: Större design reviews ska kunna delas upp och återupptas utan att chatthistoriken är enda
-        sanningskälla.
+      reason: Större design reviews ska kunna delas upp och återupptas utan att chatthistoriken
+        är enda sanningskälla.
     external_tools:
       level: optional
-      reason: Externa verktyg kan ge kompletterande evidens men är inte ett krav för kärnflödet.
+      reason: Externa verktyg kan ge kompletterande evidens men är inte ett krav för
+        kärnflödet.
     image_generation:
       level: not_required
       reason: Bildgenerering behövs inte för design review-flödet.
@@ -72,14 +75,15 @@ capabilities:
     - filesystem.list
   - id: documentation_ingestion
     requirement: required
-    purpose: Läsa tillhörande teknisk och funktionell dokumentation och jämföra den med implementationen.
+    purpose: Läsa tillhörande teknisk och funktionell dokumentation och jämföra den
+      med implementationen.
     runtime_primitives:
     - filesystem.read
     - filesystem.search
   - id: codebase_inventory
     requirement: required
-    purpose: Inventera teknikstack, kataloger, moduler och huvudsakliga komponenter innan bedömningar
-      görs.
+    purpose: Inventera teknikstack, kataloger, moduler och huvudsakliga komponenter
+      innan bedömningar görs.
     depends_on:
     - source_tree_ingestion
     runtime_primitives:
@@ -88,8 +92,8 @@ capabilities:
     - code_execution
   - id: architecture_inference
     requirement: required
-    purpose: Härleda sannolik arkitektur, ansvarsfördelning och viktiga beroenderiktningar från kod och
-      dokumentation.
+    purpose: Härleda sannolik arkitektur, ansvarsfördelning och viktiga beroenderiktningar
+      från kod och dokumentation.
     depends_on:
     - codebase_inventory
     - documentation_ingestion
@@ -99,7 +103,8 @@ capabilities:
     - structured_data
   - id: design_hotspot_detection
     requirement: required
-    purpose: Identifiera områden som motiverar fördjupad designanalys utan att likställa storlek med designfel.
+    purpose: Identifiera områden som motiverar fördjupad designanalys utan att likställa
+      storlek med designfel.
     depends_on:
     - codebase_inventory
     - architecture_inference
@@ -109,7 +114,8 @@ capabilities:
     - structured_data
   - id: design_review_analysis
     requirement: required
-    purpose: Analysera designproblem, styrkor, förändringsbarhet, testbarhet, koppling och ansvarsfördelning.
+    purpose: Analysera designproblem, styrkor, förändringsbarhet, testbarhet, koppling
+      och ansvarsfördelning.
     depends_on:
     - architecture_inference
     - design_hotspot_detection
@@ -127,7 +133,8 @@ capabilities:
     - persistent_state
   - id: cross_tree_analysis
     requirement: required
-    purpose: Analysera kopplingar och designproblem som uppstår mellan flera repositories eller källkodsträd.
+    purpose: Analysera kopplingar och designproblem som uppstår mellan flera repositories
+      eller källkodsträd.
     depends_on:
     - source_tree_ingestion
     - architecture_inference
@@ -137,7 +144,8 @@ capabilities:
     - structured_data
   - id: solution_prioritization
     requirement: required
-    purpose: Prioritera lösningar efter nytta, risk, förändringstryck, beroenden och möjliggörande effekt.
+    purpose: Prioritera lösningar efter nytta, risk, förändringstryck, beroenden och
+      möjliggörande effekt.
     depends_on:
     - design_review_analysis
     - evidence_tracking
@@ -145,7 +153,8 @@ capabilities:
     - structured_data
   - id: implementation_planning
     requirement: required
-    purpose: Bryta ned lösningsstrategin till genomförandesteg som ryms i en prompt per steg.
+    purpose: Bryta ned lösningsstrategin till genomförandesteg som ryms i en prompt
+      per steg.
     depends_on:
     - solution_prioritization
     runtime_primitives:
@@ -153,7 +162,8 @@ capabilities:
     - filesystem.write
   - id: markdown_artifact_generation
     requirement: required
-    purpose: Skapa de tre obligatoriska Markdown-artefakterna som nedladdningsbara filer.
+    purpose: Skapa de tre obligatoriska Markdown-artefakterna som nedladdningsbara
+      filer.
     depends_on:
     - design_review_analysis
     - solution_prioritization
@@ -162,14 +172,15 @@ capabilities:
     - filesystem.write
   - id: incremental_analysis
     requirement: required
-    purpose: Dela större analyser i kontrollerade steg med checkpoint efter materiell förändring.
+    purpose: Dela större analyser i kontrollerade steg med checkpoint efter materiell
+      förändring.
     runtime_primitives:
     - persistent_state
     - structured_data
   - id: resume_analysis
     requirement: required
-    purpose: Återuppta en tidigare analys från explicit workspace-state utan att chatthistoriken är enda
-      sanningskälla.
+    purpose: Återuppta en tidigare analys från explicit workspace-state utan att chatthistoriken
+      är enda sanningskälla.
     depends_on:
     - incremental_analysis
     runtime_primitives:
@@ -316,7 +327,8 @@ tools:
   - id: filesystem-list-search
     type: runtime_capability
     requirement: required
-    purpose: Inventera katalogträd och söka efter symboler, imports, konfiguration och återkommande mönster.
+    purpose: Inventera katalogträd och söka efter symboler, imports, konfiguration
+      och återkommande mönster.
     capability: filesystem.list_and_search
     deterministic: true
     mutates_workspace: false
@@ -348,8 +360,8 @@ tools:
   - id: code-execution
     type: runtime_capability
     requirement: recommended
-    purpose: Köra små deterministiska inventerings- och analysverktyg som stöd för evidens, aldrig som
-      ersättning för semantisk designbedömning.
+    purpose: Köra små deterministiska inventerings- och analysverktyg som stöd för
+      evidens, aldrig som ersättning för semantisk designbedömning.
     capability: code_execution
     deterministic: true
     mutates_workspace: false
@@ -357,8 +369,8 @@ tools:
   - id: web-research
     type: runtime_capability
     requirement: optional
-    purpose: Verifiera aktuell extern dokumentation, standarder eller ramverksrekommendationer endast
-      när uppgiften kräver det.
+    purpose: Verifiera aktuell extern dokumentation, standarder eller ramverksrekommendationer
+      endast när uppgiften kräver det.
     capability: web.search_and_read
     deterministic: false
     mutates_workspace: false
@@ -382,8 +394,8 @@ runtime:
       implementation_status: implemented
     chatgpt_custom:
       suitability: full
-      activate_by_default: true
-      implementation_status: implemented
+      activate_by_default: false
+      implementation_status: retired
     claude_projects:
       suitability: full
       activate_by_default: true
@@ -441,7 +453,7 @@ runtime:
       checksums: true
     deterministic_build: true
   custom_gpt:
-    enabled: true
+    enabled: false
     role: peer_distribution
     instruction:
       mode: compressed
@@ -481,15 +493,18 @@ runtime:
       definitions:
       - id: design-review-workflow
         name: design-review-workflow
-        description: Genomför evidensbaserad Design Reviewer-analys stegvis och producerar de tre canonical
-          Markdown-artefakterna.
+        description: Genomför evidensbaserad Design Reviewer-analys stegvis och producerar
+          de tre canonical Markdown-artefakterna.
         workflow:
         - Inventera källkodsträd och dokumentation innan designbedömningar görs.
         - Välj focused eller progressive workflow utifrån faktisk kontext- och arkitekturkomplexitet.
-        - Använd deterministiska verktyg som evidensstöd och verifiera alltid hotspots semantiskt i koden.
-        - Upprätthåll explicit checkpoint-state så att `Gör nästa steg` kan fortsätta utan omanalys.
+        - Använd deterministiska verktyg som evidensstöd och verifiera alltid hotspots
+          semantiskt i koden.
+        - Upprätthåll explicit checkpoint-state så att `Gör nästa steg` kan fortsätta
+          utan omanalys.
         - Kör evidence gate innan slutartefakterna skapas.
-        - Skapa `design-review.md`, därefter `recommended-solution-strategy.md` och sist `implementation-plan.md`.
+        - Skapa `design-review.md`, därefter `recommended-solution-strategy.md` och
+          sist `implementation-plan.md`.
         references:
         - contracts/analysis-workflow-contract.yaml
         - contracts/design-observation-contract.yaml
@@ -509,25 +524,28 @@ runtime:
     skill:
       id: design-review-workflow
       name: design-review-workflow
-      description: Genomför evidensbaserad Design Reviewer-analys stegvis och producerar de tre canonical Markdown-artefakterna.
-      references:
+      description: Genomför evidensbaserad Design Reviewer-analys stegvis och producerar
+        de tre canonical Markdown-artefakterna.
+      references: &id001
       - contracts/analysis-workflow-contract.yaml
       - contracts/design-observation-contract.yaml
       - contracts/design-review-report-contract.yaml
       - contracts/solution-prioritization-contract.yaml
       - contracts/implementation-planning-contract.yaml
-      assets:
+      assets: &id002
       - templates/design-review.md
       - templates/recommended-solution-strategy.md
       - templates/implementation-plan.md
-      scripts:
+      scripts: &id003
       - scripts/analyze_source_tree.py
+    templates:
+      readme: templates/README.plugin.md.tpl
 build_system:
   targets:
   - project
   - chat
-  - custom-gpt
-  - claude
+  - claude_project
+  - claude_skills
   - opencode
   - plugin
   runtime_targets:
@@ -537,18 +555,18 @@ build_system:
       builder: chat
       filename_pattern: <project-id>-chat-<version>.zip
       artifact_type: chat_zip
-    custom-gpt:
-      runtime_id: chatgpt_custom
-      runtime_key: custom_gpt
-      builder: custom_gpt
-      filename_pattern: <project-id>-custom-gpt-<version>.zip
-      artifact_type: custom_gpt_zip
-    claude:
+    claude_project:
       runtime_id: claude_project
       runtime_key: claude
       builder: claude
-      filename_pattern: <project-id>-claude-<version>.zip
+      filename_pattern: <project-id>-claude-project-<version>.zip
       artifact_type: claude_project_zip
+    claude_skills:
+      runtime_id: claude_skills
+      runtime_key: claude
+      builder: claude_skills
+      filename_pattern: <project-id>-claude-skills-<version>.zip
+      artifact_type: claude_skills_zip
     opencode:
       runtime_id: opencode
       runtime_key: opencode
@@ -650,3 +668,15 @@ deterministic_analysis_tools:
   primary_script: scripts/analyze_source_tree.py
   evidence_only: true
   core_review_blocks_if_unavailable: false
+skills:
+  definitions:
+  - id: design-review-workflow
+    name: design-review-workflow
+    description: Genomför evidensbaserad Design Reviewer-analys stegvis och producerar
+      de tre canonical Markdown-artefakterna.
+    references: *id001
+    assets: *id002
+    scripts: *id003
+  contract_version: 1
+  schema: schemas/skill-contract.schema.json
+  mode: explicit

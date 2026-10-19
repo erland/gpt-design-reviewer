@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import sys
 import zipfile
@@ -84,6 +85,30 @@ def validate_claude(root: Path, cfg: dict) -> list[str]:
     return errors
 
 
+
+def validate_claude_skills(root: Path, cfg: dict) -> list[str]:
+    errors = []
+    build = root / "build" / "claude-skills"
+    if not build.exists():
+        return ["Claude Skills build directory missing"]
+    for name in ("README.md", "VERSION", "MANIFEST.json", "runtime-contract.json"):
+        if not (build / name).is_file():
+            errors.append(f"Claude Skills missing {name}")
+    if (build / "project").exists():
+        errors.append("Claude Skills must not embed a Claude Project")
+    skills = cfg.get("skills", {}).get("definitions", [])
+    for skill in skills:
+        ident = skill["id"]
+        skill_dir = build / "skills" / ident
+        if not (skill_dir / "SKILL.md").is_file():
+            errors.append(f"Claude Skills missing {ident}/SKILL.md")
+        for category in ("references", "assets", "scripts"):
+            for source in skill.get(category, []) or []:
+                if not (skill_dir / category / Path(source).name).is_file():
+                    errors.append(f"Claude Skills missing {ident}/{category}/{Path(source).name}")
+    return errors
+
+
 def validate_opencode(root: Path, cfg: dict) -> list[str]:
     errors = []
     build = root / "build" / "opencode"
@@ -140,16 +165,46 @@ def validate_opencode(root: Path, cfg: dict) -> list[str]:
     skills_cfg = runtime_cfg.get("skills", {})
     if skills_cfg.get("enabled"):
         root_path = build / skills_cfg.get("directory", ".opencode/skills")
-        for skill in skills_cfg.get("definitions", []):
+        canonical_skills = cfg.get("skills", {}).get("definitions") or skills_cfg.get("definitions", [])
+        for skill in canonical_skills:
             skill_file = root_path / skill["id"] / "SKILL.md"
             if not skill_file.exists():
                 errors.append(f"Missing OpenCode skill: {skill_file.relative_to(build)}")
             else:
                 text = skill_file.read_text(encoding="utf-8")
-                if f"name: {skill['name']}" not in text:
+                if f"name: {skill['id']}" not in text:
                     errors.append(f"OpenCode skill name mismatch: {skill['id']}")
                 if f"description: {skill['description']}" not in text:
                     errors.append(f"OpenCode skill description mismatch: {skill['id']}")
+    return errors
+
+
+def _parse_skill_frontmatter(text: str) -> dict:
+    if not text.startswith("---\n"):
+        return {}
+    end = text.find("\n---\n", 4)
+    if end < 0:
+        return {}
+    block = text[4:end]
+    data = {}
+    for line in block.splitlines():
+        if not line.strip() or line.startswith(" ") or ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        data[key.strip()] = value.strip()
+    return data
+
+
+def validate_plugin_zip_entries(zip_path: Path) -> list[str]:
+    """Check installable archive entries, not just staging paths."""
+    errors = []
+    try:
+        with zipfile.ZipFile(zip_path) as archive:
+            for entry in archive.namelist():
+                if entry.replace("\\", "/").rstrip("/").split("/")[-1].lower() == "mcp.json":
+                    errors.append(f"Forbidden plugin ZIP entry: {entry}")
+    except (OSError, zipfile.BadZipFile) as exc:
+        errors.append(f"Invalid plugin ZIP: {exc}")
     return errors
 
 
@@ -159,73 +214,141 @@ def validate_plugin(root: Path, cfg: dict) -> list[str]:
     if not build.exists():
         return ["Plugin build directory missing"]
 
+    for path in build.rglob("*"):
+        if path.is_file() and path.name.lower() == "mcp.json":
+            errors.append(f"Forbidden plugin file: {path.relative_to(build)}")
+
+    for archive in (root / "dist").glob(f"{cfg['project']['id']}-plugin-*.zip"):
+        errors.extend(validate_plugin_zip_entries(archive))
+
     runtime_cfg = cfg["runtime"]["plugin"]
-    skill_cfg = runtime_cfg["skill"]
-    skill_dir = build / runtime_cfg["layout"]["skills"] / skill_cfg["id"]
     required = [
-        build / runtime_cfg["layout"]["manifest_file"],
-        build / runtime_cfg["layout"]["runtime_contract"],
         build / "README.md",
         build / "VERSION",
         build / "MANIFEST.json",
-        skill_dir / "SKILL.md",
+        build / "runtime-contract.json",
+        build / runtime_cfg["layout"]["manifest_file"],
     ]
     for p in required:
         if not p.exists():
             errors.append(f"Missing required file: {p.relative_to(build)}")
 
-    for ref in skill_cfg.get("references", []):
-        expected = skill_dir / "references" / Path(ref).name
-        if not expected.is_file():
-            errors.append(f"Missing plugin reference: {expected.relative_to(build)}")
-    for ref in skill_cfg.get("assets", []):
-        expected = skill_dir / "assets" / Path(ref).name
-        if not expected.is_file():
-            errors.append(f"Missing plugin asset: {expected.relative_to(build)}")
-    for ref in skill_cfg.get("scripts", []):
-        expected = skill_dir / "scripts" / Path(ref).name
-        if not expected.is_file():
-            errors.append(f"Missing plugin script: {expected.relative_to(build)}")
-
-    shared_lib = root / "scripts" / "lib"
-    if skill_cfg.get("scripts") and shared_lib.exists():
-        for source in shared_lib.rglob("*"):
-            if source.is_file() and source.suffix not in {".pyc", ".pyo"}:
-                expected = skill_dir / "scripts" / "lib" / source.relative_to(shared_lib)
-                if not expected.is_file():
-                    errors.append(f"Missing plugin shared script dependency: {expected.relative_to(build)}")
-
-    contract_path = build / runtime_cfg["layout"]["runtime_contract"]
-    if contract_path.is_file():
+    plugin_json = build / runtime_cfg["layout"]["manifest_file"]
+    if plugin_json.exists():
         try:
-            contract = json.loads(contract_path.read_text(encoding="utf-8"))
-            if contract.get("runtime_id") != "openai_plugin":
-                errors.append("Plugin runtime_id mismatch")
-            adapter = contract.get("adapter", {})
-            if adapter.get("compatibility") != "equivalent_runtime_dependent":
-                errors.append("Plugin compatibility mismatch")
-            req = adapter.get("runtime_requirements", {})
-            if req.get("filesystem", {}).get("write") != "required":
-                errors.append("Plugin filesystem write requirement missing")
-            if req.get("persistent_state", {}).get("level") != "required":
-                errors.append("Plugin persistent state requirement missing")
-            if req.get("code_execution", {}).get("level") != "recommended":
-                errors.append("Plugin code execution must remain recommended")
+            manifest = json.loads(plugin_json.read_text(encoding="utf-8"))
+            for key in ("name", "version", "description"):
+                if not manifest.get(key):
+                    errors.append(f"Plugin manifest missing required field: {key}")
         except Exception as exc:
-            errors.append(f"Invalid plugin runtime contract: {exc}")
+            errors.append(f"Invalid plugin.json: {exc}")
 
-    skill_file = skill_dir / "SKILL.md"
-    if skill_file.is_file():
+    manifest_path = build / "MANIFEST.json"
+    if manifest_path.exists():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if manifest.get("adapter_id") != "openai_plugin":
+                errors.append("Plugin MANIFEST adapter_id mismatch")
+            if manifest.get("plugin_manifest") != runtime_cfg["layout"]["manifest_file"]:
+                errors.append("Plugin MANIFEST plugin_manifest mismatch")
+            if manifest.get("contract_snapshot") != "runtime-contract.json":
+                errors.append("Plugin MANIFEST contract_snapshot mismatch")
+        except Exception as exc:
+            errors.append(f"Invalid plugin MANIFEST.json: {exc}")
+
+    skill_defs = cfg.get("skills", {}).get("definitions") or []
+    skills_root = build / runtime_cfg["layout"]["skills"]
+    if runtime_cfg.get("validation", {}).get("require_skill", True) and not skill_defs:
+        errors.append("Plugin runtime requires at least one canonical skill")
+
+    for skill in skill_defs:
+        skill_dir = skills_root / skill["id"]
+        skill_file = skill_dir / "SKILL.md"
+        if not skill_file.exists():
+            errors.append(f"Missing plugin skill: {skill_file.relative_to(build)}")
+            continue
+
         text = skill_file.read_text(encoding="utf-8")
-        for required_marker in (
-            "name: design-review-workflow",
-            "## Runtime requirements",
-            "Code execution is recommended",
-            "continue semantic analysis",
-            "## Canonical behavior",
-        ):
-            if required_marker not in text:
-                errors.append(f"Plugin SKILL.md missing marker: {required_marker}")
+        frontmatter = _parse_skill_frontmatter(text)
+        if runtime_cfg.get("validation", {}).get("require_skill_frontmatter", True):
+            if frontmatter.get("name") != skill["id"]:
+                errors.append(f"Plugin skill name mismatch: {skill['id']}")
+            if frontmatter.get("description") != skill["description"]:
+                errors.append(f"Plugin skill description mismatch: {skill['id']}")
+
+        for key in ("references", "assets", "scripts"):
+            for ref in skill.get(key, []) or []:
+                expected = skill_dir / key / Path(ref).name
+                if not expected.exists():
+                    errors.append(
+                        f"Missing plugin skill {key[:-1]}: {expected.relative_to(build)}"
+                    )
+
+        scripts_dir = skill_dir / "scripts"
+        packaged_scripts = [
+            p for p in scripts_dir.glob("*")
+            if p.is_file()
+        ] if scripts_dir.exists() else []
+        shared_lib = root / "scripts" / "lib"
+        if packaged_scripts and shared_lib.exists():
+            # Match the builder's import-based dependency selection, including
+            # transitive imports. Do not demand unrelated files from scripts/lib.
+            required = set()
+            pending = [p for p in packaged_scripts if p.suffix == ".py"]
+            while pending:
+                source = pending.pop()
+                try:
+                    tree = ast.parse(source.read_text(encoding="utf-8"))
+                except (SyntaxError, OSError, UnicodeError):
+                    continue
+                for node in ast.walk(tree):
+                    module = node.module if isinstance(node, ast.ImportFrom) else None
+                    if module and (module == "lib" or module.startswith("lib.")):
+                        names = (
+                            [alias.name for alias in node.names]
+                            if module == "lib" else [module.split(".")[1]]
+                        )
+                        for name in names:
+                            helper = shared_lib / (name + ".py")
+                            if helper.is_file() and helper not in required:
+                                required.add(helper)
+                                pending.append(helper)
+            if required:
+                init = shared_lib / "__init__.py"
+                if init.is_file():
+                    required.add(init)
+            # The GPT Builder's own distribution intentionally includes the
+            # complete Engine library; preserve that stronger check.
+            if cfg.get("project", {}).get("id") == "gpt-byggaren":
+                required.update(
+                    p for p in shared_lib.rglob("*")
+                    if p.is_file() and p.suffix not in {".pyc", ".pyo"}
+                )
+            for source in sorted(required):
+                expected = scripts_dir / "lib" / source.relative_to(shared_lib)
+                if not expected.is_file():
+                    errors.append(
+                        f"Missing plugin shared script dependency: {expected.relative_to(build)}"
+                    )
+
+    forbidden_parts = {
+        ".git",
+        ".github",
+        "tests",
+        "evals",
+        "research",
+        "build",
+        "dist",
+        "__pycache__",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+    }
+    for p in build.rglob("*"):
+        rel = p.relative_to(build)
+        if any(part in forbidden_parts for part in rel.parts):
+            errors.append(f"Forbidden plugin runtime path: {rel}")
+
     return errors
 
 
@@ -261,6 +384,14 @@ def main() -> int:
 
     root = Path(args.project_root).resolve()
     cfg = load_cfg(root)
+    if isinstance(cfg.get("reconstruction"), dict) and (
+        cfg["reconstruction"].get("release_ready") is not True
+        or cfg["reconstruction"].get("status") != "runtime_parity_verified"
+    ):
+        raise SystemExit(
+            "Reconstructed project is not release-ready: complete and verify "
+            "runtime parity before distribution build or validation"
+        )
 
     errors = []
     errors.extend(validate_chat(root, cfg))
@@ -268,6 +399,7 @@ def main() -> int:
         errors.extend(validate_custom(root, cfg))
     if cfg.get("runtime", {}).get("claude", {}).get("enabled"):
         errors.extend(validate_claude(root, cfg))
+        errors.extend(validate_claude_skills(root, cfg))
     if cfg.get("runtime", {}).get("opencode", {}).get("enabled"):
         errors.extend(validate_opencode(root, cfg))
     if cfg.get("runtime", {}).get("plugin", {}).get("enabled"):
