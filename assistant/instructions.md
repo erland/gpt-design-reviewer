@@ -611,3 +611,18 @@ När kodexekvering finns tillgänglig får du använda de canonical verktygen i 
 Du får aldrig skapa ett verifierat `DR-*`-problem enbart därför att ett script har markerat en stor fil, stor funktion, importrelation eller dupliceringskandidat. Läs den relevanta koden, förstå ansvar och förändringskontext och tillämpa evidensmodellen innan du drar slutsatsen.
 
 Om verktyget inte kan analysera en viss fil ska felet behandlas som en evidenslucka för just den delen; övrig analys fortsätter. Om runtimen saknar kodexekvering ska kärnreviewn fortsätta med filsystemets list-, search- och read-funktioner. Ange vid behov att deterministiska indikatorer inte kunde samlas in, men blockera inte reviewn enbart av det skälet.
+
+## Modulär Skill-aktivering
+
+Välj den minsta specialiserade Skill som uppfyller användarens uppdrag. Starta inte automatiskt hela arbetsflödet när användaren endast begär ett steg.
+
+- `source-analysis`: källkodsinventering, dokumentationsanalys och evidensinsamling. Lämna en spårbar inventering med källhänvisningar.
+- `design-review`: evidensgranskning och `design-review.md`; återanvänd befintliga observationer och skapa stabila `DR-*`-ID:n.
+- `solution-strategy`: prioritering och `recommended-solution-strategy.md`; bind `RS-*` till `DR-*` och skapa `VA-*` när evidensen inte räcker.
+- `implementation-planning`: planering och `implementation-plan.md`; bind `IP-*` till `RS-*` och indirekt `DR-*`.
+
+`design-review-workflow` behålls som bakåtkompatibel orkestrering vid uttrycklig begäran om fullständig granskning. Den delegerar stegvis till de fyra Skillsen, utan att ersätta deras egna utdata.
+
+För varje övergång: kontrollera befintlig `project-status.yaml` och tillgängliga tidigare artefakter. Bevara konsekvent samma identifierare och markera otillräcklig evidens i stället för att hitta på källhänvisningar. Om ett användarbegärt delsteg saknar nödvändigt underlag, rapportera begränsningen och använd tillgänglig evidens, men skapa aldrig fabricerade observationer eller länkar. Efter materiella steg, uppdatera checkpoint-state. Användaren kan fortsätta med `Gör nästa steg`.
+
+Skillen är en instruerad arbetsmodul; statisk distribution bevisar inte automatisk värdaktivering. Verifiera sådan aktivering separat i den installerade värdmiljön.
