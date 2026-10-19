@@ -177,19 +177,8 @@ def copy_portable_skill_modules(root: Path, cfg: dict, target: Path) -> list[str
     for skill in canonical_skill_definitions(cfg):
         ident = skill["id"]
         destination = target / ident
-        for category in ("references", "assets", "scripts"):
-            seen = set()
-            for source_ref in skill.get(category, []) or []:
-                source = root / source_ref
-                if not (source.is_file() or (category == "assets" and source.is_dir())) or source.is_symlink() or not source.resolve().is_relative_to(root.resolve()):
-                    raise SystemExit(f"Missing/unsafe canonical skill resource: {source_ref}")
-                if source.name in seen:
-                    raise SystemExit(f"Colliding skill resource filename: {source.name}")
-                seen.add(source.name)
-                if category == "assets" and source.is_dir():
-                    copy_tree_filtered(source, destination / category / source.name)
-                else:
-                    copy_file(source, destination / category / source.name)
+        resources = {key: list(skill.get(key, []) or []) for key in ("references", "assets", "scripts")}
+        _copy_skill_resources(root, destination, resources)
         destination.mkdir(parents=True, exist_ok=True)
         (destination / "SKILL.md").write_text(
             compile_skill_markdown(
@@ -978,19 +967,8 @@ def build_opencode_skills(root: Path, cfg: dict, out: Path) -> list[str]:
         skill_id = skill["id"]
         skill_dir = skill_root / skill_id
 
-        for ref_key, target_name in (
-            ("references", "references"),
-            ("assets", "assets"),
-            ("scripts", "scripts"),
-        ):
-            for ref in skill.get(ref_key, []) or []:
-                src = root / ref
-                if not src.exists():
-                    raise SystemExit(f"Canonical skill {ref_key[:-1]} missing: {ref}")
-                if ref_key == "assets" and src.is_dir():
-                    copy_tree_filtered(src, skill_dir / target_name / src.name)
-                else:
-                    copy_file(src, skill_dir / target_name / src.name)
+        resources = {key: list(skill.get(key, []) or []) for key in ("references", "assets", "scripts")}
+        _copy_skill_resources(root, skill_dir, resources)
 
         body = compile_skill_markdown(
             skill,
