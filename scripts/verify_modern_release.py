@@ -2,7 +2,7 @@
 import argparse,hashlib,json,re,sys
 from pathlib import Path
 import yaml
-p=argparse.ArgumentParser();p.add_argument('--version',required=True);p.add_argument('--project-root',default='.');a=p.parse_args();root=Path(a.project_root);d=root/'dist';cfg=yaml.safe_load((root/'gpt-project.yaml').read_text());ident=cfg['project']['id'];names={ident+'-project-'+a.version+'.zip'}|{ident+'-'+suffix+'-'+a.version+'.zip' for suffix in ['chat','plugin','claude-project','claude-skills','opencode']};actual={x.name for x in d.glob('*.zip')};errors=[]
+p=argparse.ArgumentParser();p.add_argument('--version',required=True);p.add_argument('--project-root',default='.');a=p.parse_args();root=Path(a.project_root);d=root/'dist';cfg=yaml.safe_load((root/'gpt-project.yaml').read_text());ident=cfg['project']['id'];names={ident+'-project-'+a.version+'.zip'}|{ident+'-'+suffix+'-'+a.version+'.zip' for suffix in ['chat','plugin','claude-project','claude-skills','opencode']};names.add(ident+'-engine-'+a.version+'.zip');actual={x.name for x in d.glob('*.zip')};errors=[]
 if actual!=names: errors.append(f'asset mismatch missing={names-actual}, extra={actual-names}')
 checksums=d/'SHA256SUMS.txt';manifest=d/'DELIVERY-MANIFEST.json';
 if not checksums.exists() or not manifest.exists():errors.append('missing checksum or manifest')
