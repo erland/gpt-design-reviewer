@@ -14,3 +14,8 @@ Använd `source-analysis` för inventering, `design-review` för granskning, `so
 
 ## Körning och fallback
 Kör paketerade analysverktyg endast med kompatibel Pythonmiljö och relevanta beroenden. Om kodexekvering inte är tillgänglig: fortsätt manuell evidensbaserad granskning via läsning och sökning, och ange att deterministiska indikatorer saknas. Ingen separat Engine ZIP krävs för den valfria källkodsinventeringen.
+
+## Installerad Plugin och Pythonresurser
+En läsbar installerad `skills://`-resurs är inte automatiskt en körbar fil i ChatGPT:s Pythonmiljö. Kontrollera först om värdmiljön stöder att originalskriptet och dess `lib`-moduler materialiseras utan ändringar. Om detta saknas får skriptet inte beskrivas som exekverat; rapportera `NOT VERIFIED` för skriptexekvering och fortsätt med manuell källkodsläsning och evidensbaserad designgranskning. Kör inte ett egenskrivet ersättningsskript och kräv inte en Engine ZIP för det valfria verktyget. CI verifierar separat att originalskriptet i byggd Plugin-ZIP kan extraheras och köras med riktiga beroenden; CI bevisar inte att ChatGPT kan göra samma sak direkt från installerade Skill-resurser.
+
+Versionsmetadata i genererad `SKILL.md` identifierar distributionsbygget men inte värdmiljöns runtimekapacitet. Vid återupptagning: läs samma arbetsytas `project-status.yaml`, kontrollera nästa steg och uppdatera checkpoint först efter verifierbart resultat. Återupptagning mellan turer måste funktionstestas separat.

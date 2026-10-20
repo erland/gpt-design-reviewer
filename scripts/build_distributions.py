@@ -166,7 +166,7 @@ def copy_declared_tool_scripts(root: Path, cfg: dict, target: Path) -> list[str]
     return copied
 
 
-def copy_portable_skill_modules(root: Path, cfg: dict, target: Path) -> list[str]:
+def copy_portable_skill_modules(root: Path, cfg: dict, target: Path, version: str) -> list[str]:
     """Compile canonical skills and copy their explicit resources for text-first runtimes.
 
     These files are included as usable references without assuming that Claude
@@ -189,6 +189,7 @@ def copy_portable_skill_modules(root: Path, cfg: dict, target: Path) -> list[str
                     if is_modular(cfg) else None
                 ),
                 include_canonical_behavior=is_modular(cfg),
+                version=version,
             ),
             encoding="utf-8",
         )
@@ -223,7 +224,7 @@ def build_chat(root: Path, cfg: dict, build_root: Path, version: str) -> Path:
 
     instr_src = root / cfg["instructions"]["canonical"]
     (assistant / "instructions.md").write_text(projected_instruction(root, cfg, canonical_skill_definitions(cfg)), encoding="utf-8")
-    copy_portable_skill_modules(root, cfg, assistant / "skills")
+    copy_portable_skill_modules(root, cfg, assistant / "skills", version)
 
     starters_root = root / cfg["structure"]["conversation_starters"]["path"]
     if starters_root.exists():
@@ -627,6 +628,7 @@ def build_claude_skills(root: Path, cfg: dict, build_root: Path, version: str) -
                 canonical_instruction=skill_instruction(root, cfg, canonical_skill_definitions(cfg), skill),
                 include_canonical_behavior=True,
                 runtime_requirements=plugin_script_runtime_requirements(cfg, resources["scripts"]),
+                version=version,
             ),
             encoding="utf-8",
         )
@@ -855,6 +857,7 @@ def compile_skill_markdown(
     canonical_instruction: str | None = None,
     include_canonical_behavior: bool = False,
     runtime_requirements: dict | None = None,
+    version: str | None = None,
 ) -> str:
     """Compile one canonical skill definition into deterministic SKILL.md text."""
     # Agent Skills frontmatter name is the directory/technical identifier,
@@ -873,6 +876,7 @@ def compile_skill_markdown(
     frontmatter.extend([
         "metadata:",
         "  source: generated-from-canonical-project",
+        *([f"  version: {version}"] if version else []),
         "---",
         "",
         "## Purpose",
@@ -951,7 +955,7 @@ def compile_skill_markdown(
     return "\n".join(body).rstrip() + "\n"
 
 
-def build_opencode_skills(root: Path, cfg: dict, out: Path) -> list[str]:
+def build_opencode_skills(root: Path, cfg: dict, out: Path, version: str) -> list[str]:
     """Generate OpenCode skills from the canonical skill contract."""
     runtime_cfg = cfg["runtime"]["opencode"]
     skills_cfg = runtime_cfg.get("skills", {})
@@ -975,6 +979,7 @@ def build_opencode_skills(root: Path, cfg: dict, out: Path) -> list[str]:
             compatibility="opencode",
             canonical_instruction=skill_instruction(root, cfg, canonical_skill_definitions(cfg), skill),
             include_canonical_behavior=is_modular(cfg),
+            version=version,
         )
         skill_dir.mkdir(parents=True, exist_ok=True)
         (skill_dir / "SKILL.md").write_text(body, encoding="utf-8")
@@ -1098,6 +1103,7 @@ def build_plugin(root: Path, cfg: dict, build_root: Path, version: str) -> Path:
             canonical_instruction=skill_instruction(root, cfg, canonical_skill_definitions(cfg), skill),
             include_canonical_behavior=True,
             runtime_requirements=plugin_script_runtime_requirements(cfg, resources["scripts"]),
+            version=version,
         )
         if cfg.get("project", {}).get("id") == "gpt-byggaren" and skill_id == "distribution-and-parity":
             skill_markdown += (
@@ -1409,7 +1415,7 @@ def build_opencode(root: Path, cfg: dict, build_root: Path, version: str) -> Pat
             if p.is_file() and p.name != "KNOWLEDGE.md":
                 copy_file(p, knowledge_target / p.relative_to(knowledge_root))
 
-    built_skills = build_opencode_skills(root, cfg, out)
+    built_skills = build_opencode_skills(root, cfg, out, version)
     tool_integrations = build_opencode_tools(root, cfg, out)
 
     contract_ref = runtime_cfg["layout"]["runtime_contract"]
