@@ -35,6 +35,8 @@ jobs:
         run: python scripts/test_skill_separation.py --project-root . --version 0.0.0-ci
       - name: Verify per-Skill resource ownership
         run: python scripts/test_skill_resource_ownership.py --project-root . --version 0.0.0-ci
+      - name: Execute packaged Plugin analyzer and verify Skill versions
+        run: python scripts/test_plugin_zip_execution.py --project-root . --version 0.0.0-ci
       - name: Validate distribution packages
         run: python scripts/validate_distributions.py --project-root .
       - name: Verify exact five assets and checksums
