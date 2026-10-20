@@ -189,6 +189,7 @@ def copy_portable_skill_modules(root: Path, cfg: dict, target: Path) -> list[str
                     if is_modular(cfg) else None
                 ),
                 include_canonical_behavior=is_modular(cfg),
+                version=version,
             ),
             encoding="utf-8",
         )
@@ -627,6 +628,7 @@ def build_claude_skills(root: Path, cfg: dict, build_root: Path, version: str) -
                 canonical_instruction=skill_instruction(root, cfg, canonical_skill_definitions(cfg), skill),
                 include_canonical_behavior=True,
                 runtime_requirements=plugin_script_runtime_requirements(cfg, resources["scripts"]),
+                version=version,
             ),
             encoding="utf-8",
         )
@@ -855,6 +857,7 @@ def compile_skill_markdown(
     canonical_instruction: str | None = None,
     include_canonical_behavior: bool = False,
     runtime_requirements: dict | None = None,
+    version: str | None = None,
 ) -> str:
     """Compile one canonical skill definition into deterministic SKILL.md text."""
     # Agent Skills frontmatter name is the directory/technical identifier,
@@ -873,6 +876,7 @@ def compile_skill_markdown(
     frontmatter.extend([
         "metadata:",
         "  source: generated-from-canonical-project",
+        *([f"  version: {version}"] if version else []),
         "---",
         "",
         "## Purpose",
@@ -975,6 +979,7 @@ def build_opencode_skills(root: Path, cfg: dict, out: Path) -> list[str]:
             compatibility="opencode",
             canonical_instruction=skill_instruction(root, cfg, canonical_skill_definitions(cfg), skill),
             include_canonical_behavior=is_modular(cfg),
+            version=version,
         )
         skill_dir.mkdir(parents=True, exist_ok=True)
         (skill_dir / "SKILL.md").write_text(body, encoding="utf-8")
@@ -1098,6 +1103,7 @@ def build_plugin(root: Path, cfg: dict, build_root: Path, version: str) -> Path:
             canonical_instruction=skill_instruction(root, cfg, canonical_skill_definitions(cfg), skill),
             include_canonical_behavior=True,
             runtime_requirements=plugin_script_runtime_requirements(cfg, resources["scripts"]),
+            version=version,
         )
         if cfg.get("project", {}).get("id") == "gpt-byggaren" and skill_id == "distribution-and-parity":
             skill_markdown += (
