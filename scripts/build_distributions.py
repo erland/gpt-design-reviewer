@@ -166,7 +166,7 @@ def copy_declared_tool_scripts(root: Path, cfg: dict, target: Path) -> list[str]
     return copied
 
 
-def copy_portable_skill_modules(root: Path, cfg: dict, target: Path) -> list[str]:
+def copy_portable_skill_modules(root: Path, cfg: dict, target: Path, version: str) -> list[str]:
     """Compile canonical skills and copy their explicit resources for text-first runtimes.
 
     These files are included as usable references without assuming that Claude
@@ -224,7 +224,7 @@ def build_chat(root: Path, cfg: dict, build_root: Path, version: str) -> Path:
 
     instr_src = root / cfg["instructions"]["canonical"]
     (assistant / "instructions.md").write_text(projected_instruction(root, cfg, canonical_skill_definitions(cfg)), encoding="utf-8")
-    copy_portable_skill_modules(root, cfg, assistant / "skills")
+    copy_portable_skill_modules(root, cfg, assistant / "skills", version)
 
     starters_root = root / cfg["structure"]["conversation_starters"]["path"]
     if starters_root.exists():
@@ -955,7 +955,7 @@ def compile_skill_markdown(
     return "\n".join(body).rstrip() + "\n"
 
 
-def build_opencode_skills(root: Path, cfg: dict, out: Path) -> list[str]:
+def build_opencode_skills(root: Path, cfg: dict, out: Path, version: str) -> list[str]:
     """Generate OpenCode skills from the canonical skill contract."""
     runtime_cfg = cfg["runtime"]["opencode"]
     skills_cfg = runtime_cfg.get("skills", {})
@@ -1415,7 +1415,7 @@ def build_opencode(root: Path, cfg: dict, build_root: Path, version: str) -> Pat
             if p.is_file() and p.name != "KNOWLEDGE.md":
                 copy_file(p, knowledge_target / p.relative_to(knowledge_root))
 
-    built_skills = build_opencode_skills(root, cfg, out)
+    built_skills = build_opencode_skills(root, cfg, out, version)
     tool_integrations = build_opencode_tools(root, cfg, out)
 
     contract_ref = runtime_cfg["layout"]["runtime_contract"]
