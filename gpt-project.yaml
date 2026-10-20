@@ -772,3 +772,17 @@ skills:
   contract_version: 1
   schema: schemas/skill-contract.schema.json
   mode: explicit
+
+engine:
+  enabled: true
+  resources:
+    - scripts/analyze_source_tree.py
+    - scripts/lib/source_inventory.py
+    - scripts/lib/__init__.py
+    - scripts/selftest_design_reviewer_engine.py
+  selftest: scripts/selftest_design_reviewer_engine.py
+  required_files:
+    - scripts/analyze_source_tree.py
+    - scripts/lib/source_inventory.py
+    - scripts/lib/__init__.py
+  python_dependencies: []
