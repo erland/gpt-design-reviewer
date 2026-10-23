@@ -17,26 +17,20 @@ Design Reviewer har genomfört samtliga 20 planerade utvecklingssteg.
 - Release readiness
 - GitHub Actions CI och GitHub Release-konfiguration
 
-## GPT Byggaren 1.5.0
+## GPT Byggaren 1.6.26 och aktiva runtime-mål
 
-Migreringen till GPT Byggaren 1.5.0 är klar 9/9 och har genomförts preserve-first utan att ändra Design Reviewers produktbeteende eller 20/20-status.
+Det aktuella distributionsregistret anger GPT Byggaren **1.6.26**, fem aktiva mål: Chat, OpenAI Plugin, Claude Project, Claude Skills och OpenCode. Custom GPT är pensionerad. Migration 1.5.0 dokumenteras historiskt, men är inte längre aktuellt releasekontrakt.
 
-Runtime-status:
+## Kompletterande evidens och tester
 
-- ChatGPT Chat: `equivalent_runtime_dependent`
-- ChatGPT Custom GPT: `equivalent_with_platform_constraints`
-- Claude Projects: `reduced`
-- OpenCode: `equivalent`
-- OpenAI Plugin: `equivalent_runtime_dependent`
-
-`runtime-distribution-registry.yaml` styr aktivt runtime-set, artifactnamn, parity och release-assets. Exact-asset-gaten kräver exakt det registry-definierade ZIP-setet före publicering.
+PR #11 införde valfri discovery/evidenspolicy; PR #12 operativa arbetsflöden; PR #13 en offline-matris med 17 fallback-scenarier. CI för PR #13 var grön vid slutavstämningen. Regressionstesterna anropar inte live-MCP och visar inte att installerad Plugin automatiskt orkestrerar alla tre tjänsterna. Live-acceptans kvarstår separat.
 
 ## Release automation
 
-- `.github/workflows/ci.yml` bygger registry-definierat project + aktiva runtimes och kör samtliga GPT Byggaren 1.5-gates.
+- `.github/workflows/ci.yml` bygger registry-definierat project + aktiva runtimes och kör samtliga aktuella projekt- och distributionskontroller.
 - `.github/workflows/release.yml` bygger samma registry-definierade artefakter från publicerad GitHub Release och använder releasetaggen som version.
 - Releaseflödet verifierar exakt asset-set och laddar därefter upp den validerade listan av ZIP-filer, `SHA256SUMS.txt` och `DELIVERY-MANIFEST.json`.
 
 ## Nästa aktivitet
 
-Projektet är utvecklingsmässigt klart. Importera det i ett GitHub-repository, låt CI gå grönt och publicera därefter en release med exempelvis `v1.0.0` när du vill skapa de första officiella distributionerna.
+Projektet är utvecklingsmässigt klart. Kontrollera aktuell CI och releasestatus, publicera en ny release vid behov och utför separat live-acceptans av installerad Plugin om faktisk orkestrering behöver styrkas.
