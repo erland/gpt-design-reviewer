@@ -45,27 +45,23 @@ Verktygsresultaten är endast evidens- och hotspot-signaler. De får aldrig ensa
 
 Projektverktygen i `scripts/` används för lint, hygiene, evals, runtime parity, build och distributionsvalidering.
 
-## Peer runtimes
+## Aktiva distributioner och GPT Byggaren 1.6.26
 
-Följande runtimes är implementerade från samma canonical produktmodell:
+Det auktoritativa distributionsregistret `runtime-distribution-registry.yaml` anger byggmotor **1.6.26** och följande fem aktiva runtime-mål:
 
-- ChatGPT Chat
-- ChatGPT Custom GPT
-- Claude Projects
-- OpenCode
-- OpenAI Plugin
+- ChatGPT Chat (`chat`)
+- OpenAI Plugin (`plugin`)
+- Claude Project (`claude_project`)
+- Claude Skills (`claude_skills`)
+- OpenCode (`opencode`)
 
-Canonical capabilities, slutartefakter och workspace/resume-state ska vara identiska mellan runtimes. Endast verkliga adapterskillnader får variera. Se `docs/runtime-parity.md`.
+**Custom GPT är pensionerad** i det aktuella distributionsregistret. Projektets tidigare 1.5-dokumentation finns kvar som historik men beskriver inte det aktuella release-asset-setet. Canonical produktbeteende är gemensamt; faktiska runtimebegränsningar måste fortfarande verifieras.
 
-## GPT Byggaren 1.5.0
+## Valfri verklighetsbaserad evidens
 
-Design Reviewer är migrerad till GPT Byggaren 1.5.0 med bibehållet produktbeteende och fortsatt 20/20 complete produktstatus.
+Agent Workspace kan ge isolerad teknisk build/test-evidens, PWA Preview kan tillgängliggöra en säker statisk webbapp och Browser Screenshot kan ge visuella eller interaktiva observationer. Verktygen är **valfria** och får aldrig krävas för den vanliga designgranskningen. En lyckad preview är inte ett funktionstest, och en skärmbild bevisar inte ett underliggande arkitekturfel.
 
-Aktiva runtime-distributioner är ChatGPT Chat, ChatGPT Custom GPT, Claude Projects, OpenCode och OpenAI Plugin. Verklig compatibility redovisas som Chat `equivalent_runtime_dependent`, Custom GPT `equivalent_with_platform_constraints`, Claude Projects `reduced`, OpenCode `equivalent` och OpenAI Plugin `equivalent_runtime_dependent`.
-
-OpenAI Plugin är skills-first och använder hostens filesystem/persistent-state capabilities. `scripts/analyze_source_tree.py` paketeras som rekommenderad script-resurs; saknas code execution fortsätter den semantiska analysen med ärlig degrade. Build, runtime-verifiering, parity och GitHub Release härleds från `runtime-distribution-registry.yaml`, och exakt release-asset-set valideras före publicering.
-
-Se `docs/gpt-builder-1.5-runtime-migration.md`, `docs/openai-plugin-1.5-assessment.md` och `migration-status-1.5.yaml`.
+Policy: `assistant/policies/optional-companion-evidence.md` och `assistant/policies/companion-review-workflows.md`. PR #11–#12 införde instruktioner och offlinekontrakt; PR #13 lade till **17 simulerade fallbacktestfall**. Dessa tester gör inga live-MCP-anrop och bevisar inte faktiskt språkmodellbeteende med installerade plugins.
 
 ## Projektstatus
 
@@ -74,4 +70,4 @@ Se `STATUS.md` och `project-status.yaml` för aktuell checkpoint. Hela utvecklin
 
 ## GitHub Actions
 
-Projektet innehåller CI och releaseautomation under `.github/workflows/`. CI bygger och validerar canonical project samt ChatGPT Chat, Custom GPT, Claude Projects och OpenCode. När en GitHub Release publiceras härleds versionsnumret från releasetaggen och samtliga ZIP-distributioner, checksummor och delivery manifest laddas upp till releasen. Se `docs/release-configuration.md`.
+Projektet innehåller CI och releaseautomation under `.github/workflows/`. CI bygger och validerar canonical project samt de fem runtime-målen i distributionsregistret. När en GitHub Release publiceras härleds versionsnumret från releasetaggen och samtliga ZIP-distributioner, checksummor och delivery manifest laddas upp till releasen. Se `docs/release-configuration.md`.

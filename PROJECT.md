@@ -54,16 +54,15 @@ Prioritering bygger inte på severity ensam. Hårda beroenden, evidensgrindar oc
 
 `scripts/analyze_source_tree.py` ger reproducerbar evidensinsamling. Verktygen gör inga designbedömningar och kärnreviewn ska kunna degradera till vanlig filläsning/sökning om kodexekvering saknas.
 
-## Peer runtimes
+## Peer runtimes och 1.6.26
 
-Implementerade och validerade från samma canonical kontrakt:
+Det aktuella `runtime-distribution-registry.yaml` är källa för distributionsmålen: `chat`, `plugin`, `claude_project`, `claude_skills` och `opencode`. Projektet använder GPT Byggaren 1.6.26 och Custom GPT är pensionerad. Äldre migrationsdokument för 1.5.0 är historiska, inte gällande releasekonfiguration.
 
-- ChatGPT Chat
-- ChatGPT Custom GPT
-- Claude Projects
-- OpenCode
+## Valfria evidensintegrationer
 
-Runtime parity verifieras med `scripts/check_runtime_parity.py`. Dokumenterade adapterskillnader finns i `docs/runtime-parity.md`.
+Kod- och dokumentationsgranskning är huvudspåret. Agent Workspace (isolerad, kompatibel bygg-/testprobe), PWA Preview (säker statisk webb) och Browser Screenshot (visuell eller faktiskt interaktiv observation) kan komplettera evidensen. Se `assistant/policies/optional-companion-evidence.md` och `assistant/policies/companion-review-workflows.md`. Saknad plugin eller miljöfel får inte beskrivas som designproblem; skapa vid behov en spårbar `VA-*`-åtgärd.
+
+PR #11–#13 innehåller policy och offline-regressionstester. De simulerade testerna är inte likvärdiga med verklig live-MCP-acceptans.
 
 ## Kvalitet
 
@@ -72,4 +71,4 @@ Projektet har schemas, deterministiska evals, lint, hygiene, distributionsvalide
 
 ## GitHub Actions
 
-Projektet innehåller CI och releaseautomation under `.github/workflows/`. CI bygger och validerar canonical project samt ChatGPT Chat, Custom GPT, Claude Projects och OpenCode. När en GitHub Release publiceras härleds versionsnumret från releasetaggen och samtliga ZIP-distributioner, checksummor och delivery manifest laddas upp till releasen. Se `docs/release-configuration.md`.
+Projektet innehåller CI och releaseautomation under `.github/workflows/`. CI bygger och validerar canonical project och registret för fem aktiva runtime-mål. När en GitHub Release publiceras härleds versionsnumret från releasetaggen och samtliga ZIP-distributioner, checksummor och delivery manifest laddas upp till releasen. Se `docs/release-configuration.md`.
