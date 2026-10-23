@@ -1,5 +1,7 @@
 # Runtime parity – Design Reviewer
 
+> **Aktuell distributionsstatus (GPT Byggaren 1.6.26):** Se `runtime-distribution-registry.yaml`. Aktiva mål är Chat, Plugin, Claude Project, Claude Skills och OpenCode; Custom GPT är pensionerad. Tabellen nedan dokumenterar delar av äldre adapterbedömning och är inte en aktuell femmålsmatris. CI/build-validering och verklig end-to-end-runtime-paritet är olika kontroller. Valfria Agent Workspace/PWA Preview/Browser Screenshot-prober beskrivs i `assistant/policies/optional-companion-evidence.md`; offline-testad fallback är inte live-verifierad orkestrering.
+
 Status: PASS  
 Scope: ChatGPT Chat, ChatGPT Custom GPT, Claude Projects, OpenCode och OpenAI Plugin.
 
