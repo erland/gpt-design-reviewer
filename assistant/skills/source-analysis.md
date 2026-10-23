@@ -8,3 +8,6 @@ Inventera källträd, dokumentation, teknikstack, modulgränser, dataflöden, in
 
 ## Utdata och överlämning
 Lämna inventering med exakta källreferenser, arkitekturöversikt, styrkor, hotspots och evidensluckor. Uppdatera `project-status.yaml`; nästa Skill är `design-review`. Ändra inte källkoden.
+
+## Valfri praktisk verifiering
+När faktisk exekvering eller UI-observation behövs för en specifik designhypotes, följ `assistant/policies/companion-review-workflows.md` och evidensreglerna i gemensam kärna. Plugins är valfria; rapportera ej utförda kontroller som NOT VERIFIED och använd VA-åtgärd när evidensen inte räcker.
