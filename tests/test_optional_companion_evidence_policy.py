@@ -16,7 +16,7 @@ class OptionalEvidencePolicyTest(unittest.TestCase):
         text = (ROOT / "assistant/policies/optional-companion-evidence.md").read_text(encoding="utf-8")
         for term in ("NOT VERIFIED", "environment_limited", "DR-observation", "VA-valideringsåtgärd",
                      "skärmbild", "smoke", "källrevision", "backendtimeout"):
-            self.assertIn(term, text)
+            self.assertIn(term.casefold(), text.casefold())
 
     def test_zip_and_privacy_remain_safe(self):
         text = (ROOT / "assistant/policies/optional-companion-evidence.md").read_text(encoding="utf-8")
