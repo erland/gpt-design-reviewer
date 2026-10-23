@@ -21,6 +21,8 @@ jobs:
         run: python -m unittest discover -s tests -p "test_optional_companion_evidence_policy.py" -v
       - name: Validate practical companion workflows offline
         run: python -m unittest discover -s tests -p "test_practical_companion_workflows.py" -v
+      - name: Validate companion evidence fallback matrix offline
+        run: python -m unittest discover -s tests -p "test_offline_companion_evidence.py" -v
       - name: Lint project
         run: python scripts/lint_gpt_project.py --project-root .
       - name: Validate 1.5 domain contracts (retained)
