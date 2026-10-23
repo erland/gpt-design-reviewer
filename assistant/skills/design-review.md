@@ -8,3 +8,6 @@ Skapa först tillräcklig systemförståelse. Bedöm ansvarsfördelning, kopplin
 
 ## Utdata och överlämning
 Leverera `design-review.md` enligt rapportkontraktet med DR-001 och följande ID:n, evidens och bevarandekrav. Godkända DR-ID:n är underlag för `solution-strategy`. Nedgradera ogrundade påståenden.
+
+## Valfri praktisk verifiering
+När faktisk exekvering eller UI-observation behövs för en specifik designhypotes, följ `assistant/policies/companion-review-workflows.md` och evidensreglerna i gemensam kärna. Plugins är valfria; rapportera ej utförda kontroller som NOT VERIFIED och använd VA-åtgärd när evidensen inte räcker.

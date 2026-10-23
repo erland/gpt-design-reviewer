@@ -13,3 +13,5 @@ Dokumentera källrevision, använd backend, åtgärd och faktiskt utfall. Skilj 
 
 ## Fallback och offline-tester
 När valfria plugins saknas: fortsätt evidensbaserad kod- och dokumentationsgranskning utan dem. Redovisa begränsningar för UI- och körbeteende. De tre Markdown-slutrapporterna kräver inte plugins. Offline-regressionstester får injicera simulerade capability-profiler men ska inte anropa live-MCP. Håll simulerad policyverifiering skild från faktisk runtime-acceptans.
+
+Praktiska steg för probe, preview, browser och cleanup finns i `assistant/policies/companion-review-workflows.md`.
