@@ -24,6 +24,8 @@ jobs:
           TAG="${{ github.event.release.tag_name }}"
           [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]] || exit 1
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+      - name: Validate optional companion evidence policy offline
+        run: python -m unittest discover -s tests -p "test_optional_companion_evidence_policy.py" -v
       - name: Lint, evals, hygiene
         run: |
           python scripts/lint_gpt_project.py --project-root .
